@@ -66,7 +66,12 @@ export const AboutPage: React.FC = () => {
         </p>
         <div className="flex items-center gap-2 font-mono text-xs text-forest-900">
           <Mail className="w-4 h-4 text-ink-muted" />
-          <span>{config?.siteContactEmail || 'info@forestwatch.org'}</span>
+          <a
+            href={`mailto:${config?.siteContactEmail || 'shreyashsr2004@gmail.com'}`}
+            className="hover:text-forest-700 hover:underline transition-colors"
+          >
+            {config?.siteContactEmail || 'shreyashsr2004@gmail.com'}
+          </a>
         </div>
       </section>
     </div>
