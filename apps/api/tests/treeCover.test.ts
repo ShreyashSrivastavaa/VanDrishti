@@ -24,23 +24,31 @@ describe('Tree Cover National Layer Sampling API', () => {
     expect(res.body.reason).toContain('outside');
   });
 
-  it('returns accurate tree cover share percent for valid coordinates within India', async () => {
-    // Western Ghats (dense tree canopy)
-    const res = await request(app).get('/api/v1/tree-cover/sample?lat=14.15&lon=74.85');
+  it('samples ocean point (Arabian Sea) and returns null tree cover with isCovered=false', async () => {
+    // lat 15.0, lon 70.0 is open Arabian Sea within the India bbox
+    const res = await request(app).get('/api/v1/tree-cover/sample?lat=15.0&lon=70.0');
     expect(res.status).toBe(200);
-    expect(res.body.isCovered).toBe(true);
-    expect(typeof res.body.treeCoverSharePercent).toBe('number');
-    expect(res.body.treeCoverSharePercent).toBeGreaterThanOrEqual(10);
-    expect(res.body.treeCoverSharePercent).toBeLessThanOrEqual(100);
-    expect(res.body.source).toContain('ESA WorldCover');
-    expect(res.body.year).toBe('2021');
+    expect(res.body.isCovered).toBe(false);
+    expect(res.body.treeCoverSharePercent).toBeNull();
+    expect(res.body.reason).toContain('Water body');
   });
 
-  it('handles northern subcontinent coordinates within envelope', async () => {
-    // Delhi / North India
-    const res = await request(app).get('/api/v1/tree-cover/sample?lat=28.61&lon=77.20');
+  it('samples Thar desert point and returns tree cover near 0-2%', async () => {
+    // lat 27.0, lon 71.5 is in Thar desert
+    const res = await request(app).get('/api/v1/tree-cover/sample?lat=27.0&lon=71.5');
     expect(res.status).toBe(200);
     expect(res.body.isCovered).toBe(true);
     expect(typeof res.body.treeCoverSharePercent).toBe('number');
+    expect(res.body.treeCoverSharePercent).toBeLessThanOrEqual(2);
+  });
+
+  it('samples dense Western Ghats forest point and returns high tree cover (>= 50%)', async () => {
+    // Western Ghats dense canopy
+    const res = await request(app).get('/api/v1/tree-cover/sample?lat=14.0&lon=75.0');
+    expect(res.status).toBe(200);
+    expect(res.body.isCovered).toBe(true);
+    expect(typeof res.body.treeCoverSharePercent).toBe('number');
+    expect(res.body.treeCoverSharePercent).toBeGreaterThanOrEqual(50);
+    expect(res.body.source).toContain('ESA WorldCover');
   });
 });

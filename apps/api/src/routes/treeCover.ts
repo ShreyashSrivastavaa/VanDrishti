@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import path from 'path';
+import { fromUrl, fromFile, GeoTIFF, GeoTIFFImage } from 'geotiff';
 
 const router = Router();
 
@@ -26,6 +27,68 @@ const INDIA_BBOX = {
   maxLon: 98.0,
   maxLat: 38.0,
 };
+
+// Cached GeoTIFF image handle
+let cachedTiffImage: {
+  image: GeoTIFFImage;
+  bbox: [number, number, number, number];
+  width: number;
+  height: number;
+  sourceKey: string;
+} | null = null;
+
+async function getTreeCoverTiffImage(): Promise<{
+  image: GeoTIFFImage;
+  bbox: [number, number, number, number];
+  width: number;
+  height: number;
+} | null> {
+  const cogUrl = process.env.TREECOVER_COG_URL;
+  const artifactDir = path.resolve(process.cwd(), process.env.ARTIFACT_LOCAL_DIR || './data/artifacts');
+  let localCogPath = path.join(artifactDir, 'national_layer', 'india_tree_cover_density.tif');
+  if (!fs.existsSync(localCogPath)) {
+    const fallbackPath = path.resolve(process.cwd(), '../../data/artifacts/national_layer/india_tree_cover_density.tif');
+    if (fs.existsSync(fallbackPath)) {
+      localCogPath = fallbackPath;
+    }
+  }
+
+  const currentSourceKey = cogUrl || (fs.existsSync(localCogPath) ? localCogPath : '');
+  if (!currentSourceKey) {
+    return null;
+  }
+
+  if (cachedTiffImage && cachedTiffImage.sourceKey === currentSourceKey) {
+    return cachedTiffImage;
+  }
+
+  try {
+    let tiff: GeoTIFF;
+    if (cogUrl) {
+      tiff = await fromUrl(cogUrl);
+    } else {
+      tiff = await fromFile(localCogPath);
+    }
+
+    const image = await tiff.getImage();
+    const bbox = image.getBoundingBox() as [number, number, number, number];
+    const width = image.getWidth();
+    const height = image.getHeight();
+
+    cachedTiffImage = {
+      image,
+      bbox,
+      width,
+      height,
+      sourceKey: currentSourceKey,
+    };
+
+    return cachedTiffImage;
+  } catch (err) {
+    console.warn('[TreeCover] Failed to open COG:', err);
+    return null;
+  }
+}
 
 // GET /api/v1/tree-cover/sample?lat=...&lon=...
 router.get('/sample', sampleLimiter, async (req: Request, res: Response) => {
@@ -71,70 +134,80 @@ router.get('/sample', sampleLimiter, async (req: Request, res: Response) => {
     });
   }
 
-  // Try reading from generated local COG or fixture raster
-  let sampledValue: number | null = null;
-  const artifactDir = path.resolve(process.cwd(), process.env.ARTIFACT_LOCAL_DIR || './data/artifacts');
-  const cogPath = path.join(artifactDir, 'national_layer', 'india_tree_cover_density.tif');
+  // Attempt reading exclusively from the real georeferenced COG
+  const tiffData = await getTreeCoverTiffImage();
 
-  if (fs.existsSync(cogPath)) {
-    try {
-      const stats = fs.statSync(cogPath);
-      // If it's a raw grid (300x300 uint8 bytes)
-      if (stats.size >= 90000) {
-        const fd = fs.openSync(cogPath, 'r');
-        const buffer = Buffer.alloc(stats.size);
-        fs.readSync(fd, buffer, 0, stats.size, 0);
-        fs.closeSync(fd);
-
-        // Map lat/lon to grid cell [300 x 300]
-        const col = Math.floor(((lon - INDIA_BBOX.minLon) / (INDIA_BBOX.maxLon - INDIA_BBOX.minLon)) * 300);
-        const row = Math.floor(((INDIA_BBOX.maxLat - lat) / (INDIA_BBOX.maxLat - INDIA_BBOX.minLat)) * 300);
-
-        if (row >= 0 && row < 300 && col >= 0 && col < 300) {
-          // If pure raw grid, offset is row * 300 + col
-          // If TIFF, pixel data is offset from header
-          const rawOffset = stats.size === 90000 ? (row * 300 + col) : (stats.size - 90000 + (row * 300 + col));
-          if (rawOffset >= 0 && rawOffset < buffer.length) {
-            const rawByte = buffer[rawOffset];
-            if (rawByte <= 100) {
-              sampledValue = rawByte;
-            }
-          }
-        }
-      }
-    } catch {
-      // Fallback to biogeographic reference calculation
-    }
+  if (!tiffData) {
+    return res.status(503).json({
+      error: {
+        code: 'DATASET_UNAVAILABLE',
+        message: 'National tree-cover reference COG is currently unavailable. No synthetic fallback is permitted.',
+      },
+    });
   }
 
-  // Biogeographic reference density model if COG is unavailable
-  if (sampledValue === null) {
-    // 1. Western Ghats corridor (lat: 8.5 to 20.5, lon: 73.5 to 76.0) -> high canopy (70-95%)
-    if (lat >= 8.5 && lat <= 20.5 && lon >= 73.5 && lon <= 76.0) {
-      sampledValue = Math.round(75 + 18 * Math.sin(lat * 2.1));
-    }
-    // 2. Himalayan Foothills / Northeast (lat: 25.0 to 32.0, lon: 77.0 to 95.0) -> (60-88%)
-    else if (lat >= 25.0 && lat <= 32.0 && lon >= 77.0 && lon <= 95.0) {
-      sampledValue = Math.round(62 + 22 * Math.cos(lon * 1.5));
-    }
-    // 3. Central India dry deciduous (lat: 18.0 to 24.5, lon: 76.0 to 83.0) -> (25-55%)
-    else if (lat >= 18.0 && lat <= 24.5 && lon >= 76.0 && lon <= 83.0) {
-      sampledValue = Math.round(35 + 15 * Math.sin(lat + lon));
-    }
-    // 4. Plains / arid regions -> (5-18%)
-    else {
-      sampledValue = Math.round(6 + 8 * Math.abs(Math.sin(lat * 3.7)));
-    }
+  const { image, bbox, width, height } = tiffData;
+  const [minX, minY, maxX, maxY] = bbox;
+
+  if (lon < minX || lon > maxX || lat < minY || lat > maxY) {
+    return res.json({
+      lat,
+      lon,
+      treeCoverSharePercent: null,
+      isCovered: false,
+      reason: 'Coordinates fall outside reference raster coverage bounds.',
+      source: 'ESA WorldCover 2021 (10 m aggregated to ~30 m)',
+      year: '2021',
+    });
   }
 
-  res.json({
-    lat,
-    lon,
-    treeCoverSharePercent: Math.min(100, Math.max(0, sampledValue)),
-    isCovered: true,
-    source: 'ESA WorldCover 2021 (10 m aggregated to ~30 m)',
-    year: '2021',
-  });
+  try {
+    const col = Math.floor(((lon - minX) / (maxX - minX)) * width);
+    const row = Math.floor(((maxY - lat) / (maxY - minY)) * height);
+
+    const clampedCol = Math.min(width - 1, Math.max(0, col));
+    const clampedRow = Math.min(height - 1, Math.max(0, row));
+
+    const [raster] = await image.readRasters({
+      window: [clampedCol, clampedRow, clampedCol + 1, clampedRow + 1],
+    });
+
+    const rawVal = Number((raster as any)[0]);
+
+    // In ESA WorldCover aggregated density:
+    // 255 = nodata (water/ocean/outside data)
+    // 0..100 = real tree-cover density percentage
+    if (rawVal === 255 || isNaN(rawVal)) {
+      return res.json({
+        lat,
+        lon,
+        treeCoverSharePercent: null,
+        isCovered: false,
+        reason: 'Water body, nodata, or outside classified tree cover.',
+        source: 'ESA WorldCover 2021 (10 m aggregated to ~30 m)',
+        year: '2021',
+      });
+    }
+
+    const percentage = Math.min(100, Math.max(0, Math.round(rawVal)));
+
+    return res.json({
+      lat,
+      lon,
+      treeCoverSharePercent: percentage,
+      isCovered: true,
+      source: 'ESA WorldCover 2021 (10 m aggregated to ~30 m)',
+      year: '2021',
+    });
+  } catch (err: any) {
+    console.error('[TreeCover] Raster window read error:', err);
+    return res.status(500).json({
+      error: {
+        code: 'SAMPLE_READ_FAILED',
+        message: 'Failed to sample reference raster at the specified coordinates.',
+      },
+    });
+  }
 });
 
 export default router;

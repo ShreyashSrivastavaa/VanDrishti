@@ -25,7 +25,7 @@ if (typeof window !== 'undefined' && !protocolRegistered) {
 // India geographic bounding box envelope: [min_lon, min_lat, max_lon, max_lat]
 const INDIA_BBOX: [number, number, number, number] = [68.0, 6.5, 97.5, 37.5];
 
-// Fallback curated regions in case API connection is offline
+// Fallback curated regions in case API connection is offline (labeled as demo fallback, 0 counts)
 const FALLBACK_AOIS: AoiSummary[] = [
   {
     id: "385be035-df27-4152-a8bf-d7ebc7efe407",
@@ -38,12 +38,12 @@ const FALLBACK_AOIS: AoiSummary[] = [
     bbox: [74.75, 14.1, 74.92, 14.25],
     areaKm2: 305.86,
     kind: "curated",
-    isDemo: false,
+    isDemo: true,
     createdAt: "2026-10-10T00:00:00.000Z",
-    latestObservationDate: "2023-08-18",
-    observationCount: 4,
-    analysisCount: 1,
-    totalLossHa: 24.99,
+    latestObservationDate: null,
+    observationCount: 0,
+    analysisCount: 0,
+    totalLossHa: 0,
   },
   {
     id: "3c9bee31-cd7e-4a96-aa66-df31619349f1",
@@ -56,12 +56,12 @@ const FALLBACK_AOIS: AoiSummary[] = [
     bbox: [-63.25, -9.6, -63.05, -9.42],
     areaKm2: 439.24,
     kind: "curated",
-    isDemo: false,
+    isDemo: true,
     createdAt: "2026-10-10T00:00:00.000Z",
-    latestObservationDate: "2023-08-18",
-    observationCount: 4,
-    analysisCount: 1,
-    totalLossHa: 5.23,
+    latestObservationDate: null,
+    observationCount: 0,
+    analysisCount: 0,
+    totalLossHa: 0,
   },
   {
     id: "afdfbac0-3136-4a90-9336-183355a796e6",
@@ -74,12 +74,12 @@ const FALLBACK_AOIS: AoiSummary[] = [
     bbox: [113.8, -2.45, 114.0, -2.3],
     areaKm2: 370.82,
     kind: "curated",
-    isDemo: false,
+    isDemo: true,
     createdAt: "2026-10-10T00:00:00.000Z",
-    latestObservationDate: "2023-08-18",
-    observationCount: 4,
-    analysisCount: 1,
-    totalLossHa: 18.31,
+    latestObservationDate: null,
+    observationCount: 0,
+    analysisCount: 0,
+    totalLossHa: 0,
   },
   {
     id: "8e60709c-803d-4e64-bae4-faf55bbd8426",
@@ -92,12 +92,12 @@ const FALLBACK_AOIS: AoiSummary[] = [
     bbox: [-70.35, -12.95, -70.18, -12.8],
     areaKm2: 307.53,
     kind: "curated",
-    isDemo: false,
+    isDemo: true,
     createdAt: "2026-10-10T00:00:00.000Z",
-    latestObservationDate: "2023-08-18",
-    observationCount: 4,
-    analysisCount: 1,
-    totalLossHa: 19.55,
+    latestObservationDate: null,
+    observationCount: 0,
+    analysisCount: 0,
+    totalLossHa: 0,
   },
   {
     id: "acd82d59-c14f-479a-9166-e0adfb099e16",
@@ -110,12 +110,12 @@ const FALLBACK_AOIS: AoiSummary[] = [
     bbox: [-55.65, -11.95, -55.45, -11.75],
     areaKm2: 484.3,
     kind: "curated",
-    isDemo: false,
+    isDemo: true,
     createdAt: "2026-10-10T00:00:00.000Z",
-    latestObservationDate: "2023-08-18",
-    observationCount: 4,
-    analysisCount: 1,
-    totalLossHa: 19.16,
+    latestObservationDate: null,
+    observationCount: 0,
+    analysisCount: 0,
+    totalLossHa: 0,
   },
   {
     id: "27a9b182-a763-4656-a570-de00eae1f569",
@@ -128,12 +128,12 @@ const FALLBACK_AOIS: AoiSummary[] = [
     bbox: [19.55, 64.15, 19.85, 64.3],
     areaKm2: 242.08,
     kind: "curated",
-    isDemo: false,
+    isDemo: true,
     createdAt: "2026-10-10T00:00:00.000Z",
-    latestObservationDate: "2023-08-18",
-    observationCount: 4,
-    analysisCount: 1,
-    totalLossHa: 13.0,
+    latestObservationDate: null,
+    observationCount: 0,
+    analysisCount: 0,
+    totalLossHa: 0,
   },
 ];
 
@@ -227,10 +227,11 @@ export const MapWorkspace: React.FC = () => {
   const detectionIdFromUrl = searchParams.get('detection');
 
   // 1. Fetch AOIs
-  const { data: remoteAois = [], isError: aoisError } = useQuery({
+  const { data: remoteAois = [], isError: aoisError, isLoading: aoisLoading } = useQuery({
     queryKey: ['aois'],
     queryFn: api.getAois,
-    retry: 1,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 
   const aois = remoteAois.length > 0 ? remoteAois : (aoisError ? FALLBACK_AOIS : []);
@@ -250,10 +251,12 @@ export const MapWorkspace: React.FC = () => {
   }, [aois, aoiSlugFromUrl]);
 
   // Observations for the selected AOI
-  const { data: observations = [], isLoading: obsLoading } = useQuery({
+  const { data: observations = [], isLoading: obsLoading, isError: obsError } = useQuery({
     queryKey: ['observations', selectedAoi?.slug],
     queryFn: () => selectedAoi ? api.getAoiObservations(selectedAoi.slug) : Promise.resolve([]),
     enabled: !!selectedAoi,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 
   // Selected date pair
@@ -915,6 +918,24 @@ export const MapWorkspace: React.FC = () => {
       {/* Center Map Canvas */}
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="w-full h-full" id="maplibre-container" />
+
+        {/* Cold-Start / API waking up notification */}
+        {(aoisLoading || (obsLoading && observations.length === 0)) && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-4 py-2 bg-forest-900/95 text-paper text-xs rounded shadow-lg border border-forest-700 animate-pulse font-sans">
+            <span className="w-2 h-2 rounded-full bg-olive-200 animate-ping shrink-0" />
+            <span>Connecting to observatory API (free-tier server may take 30–45s to wake up)...</span>
+          </div>
+        )}
+
+        {/* Persistent DEMO banner when displaying synthetic test data */}
+        {(selectedAoi?.isDemo || activeObs?.isDemo) && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3.5 py-1.5 bg-amber-100/95 border border-amber-400 text-amber-950 text-xs rounded shadow-sm font-medium">
+            <span className="bg-amber-600 text-white font-mono text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+              DEMO
+            </span>
+            <span>Illustrative / synthetic test observation. Ground validation pending.</span>
+          </div>
+        )}
 
         {/* Top-center Contextual Sampling Pill */}
         {sampledReadout && (

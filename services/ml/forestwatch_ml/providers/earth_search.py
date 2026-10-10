@@ -1,3 +1,4 @@
+import os
 import requests
 from typing import List, Dict, Any, Tuple, Optional
 from datetime import date
@@ -5,10 +6,35 @@ import numpy as np
 from .base import ImageryProvider, STACItemMetadata
 from ..config import settings
 
+try:
+    import rasterio
+    from rasterio.windows import from_bounds
+    from rasterio.warp import transform_bounds
+    from rasterio.enums import Resampling
+
+    _proj_path = os.path.join(os.path.dirname(rasterio.__file__), "proj_data")
+    if os.path.exists(_proj_path):
+        os.environ["PROJ_LIB"] = _proj_path
+        os.environ["PROJ_DATA"] = _proj_path
+    RASTERIO_AVAILABLE = True
+except Exception:
+    RASTERIO_AVAILABLE = False
+
+BAND_KEY_MAP = {
+    "B02": ["blue", "B02", "b02"],
+    "B03": ["green", "B03", "b03"],
+    "B04": ["red", "B04", "b04"],
+    "B08": ["nir", "B08", "b08"],
+    "B11": ["swir16", "B11", "b11"],
+    "B12": ["swir22", "B12", "b12"],
+    "SCL": ["scl", "SCL"],
+}
+
+
 class EarthSearchProvider(ImageryProvider):
     """
     Element 84 Earth Search STAC Provider (sentinel-2-l2a on AWS).
-    Zero credentials required for STAC queries.
+    Zero credentials required for STAC queries or public COG reading.
     """
 
     def __init__(self, endpoint_url: Optional[str] = None):
@@ -72,8 +98,53 @@ class EarthSearchProvider(ImageryProvider):
     ) -> Dict[str, np.ndarray]:
         """
         Fetches windowed band rasters for the bounding box.
-        In test or network-isolated environments, returns structured arrays.
+        Reads real public Cloud-Optimized GeoTIFFs (COGs) from AWS S3 via rasterio.
+        Falls back to calibrated deterministic synthesis for offline testing.
         """
+        if RASTERIO_AVAILABLE and scene.assets:
+            def find_url(name: str) -> Optional[str]:
+                for k in BAND_KEY_MAP.get(name, [name]):
+                    if k in scene.assets and scene.assets[k]:
+                        return scene.assets[k]
+                return None
+
+            ref_url = find_url("B04")
+            if ref_url:
+                try:
+                    with rasterio.Env(
+                        AWS_NO_SIGN_REQUEST="YES",
+                        GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
+                        CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif",
+                    ):
+                        with rasterio.open(ref_url) as src_ref:
+                            bounds_utm = transform_bounds("EPSG:4326", src_ref.crs, *bbox)
+                            win_ref = from_bounds(*bounds_utm, transform=src_ref.transform)
+                            b04_raw = src_ref.read(1, window=win_ref)
+                            target_shape = b04_raw.shape
+                            b04 = np.clip(b04_raw.astype(np.float32) / 10000.0, 0.0, 1.0).astype(np.float32)
+
+                        bands: Dict[str, np.ndarray] = {"B04": b04}
+                        for band_name, candidates in BAND_KEY_MAP.items():
+                            if band_name == "B04":
+                                continue
+                            band_url = find_url(band_name)
+                            if not band_url:
+                                continue
+                            is_scl = (band_name == "SCL")
+                            with rasterio.open(band_url) as src_band:
+                                win_band = from_bounds(*bounds_utm, transform=src_band.transform)
+                                resamp = Resampling.nearest if is_scl else Resampling.bilinear
+                                band_raw = src_band.read(1, window=win_band, out_shape=target_shape, resampling=resamp)
+                                if is_scl:
+                                    bands["SCL"] = band_raw.astype(np.uint8)
+                                else:
+                                    bands[band_name] = np.clip(band_raw.astype(np.float32) / 10000.0, 0.0, 1.0).astype(np.float32)
+
+                        if all(k in bands for k in ["B02", "B03", "B04", "B08", "B11", "B12", "SCL"]):
+                            return bands
+                except Exception as e:
+                    print(f"[EarthSearchProvider] Real COG fetch warning: {e}. Falling back to deterministic simulation.")
+
         # Grid dimensions approx for bbox at 10m
         min_lon, min_lat, max_lon, max_lat = bbox
         width = max(64, int(abs(max_lon - min_lon) * 111320 / target_resolution_m))
@@ -100,12 +171,12 @@ class EarthSearchProvider(ImageryProvider):
 
         # Inject realistic cloud mask fraction matching scene.cloud_cover
         if scene.cloud_cover > 0:
-            cloud_px = int((scene.cloud_cover / 100.0) * height * width * 0.4) # AOI often has less cloud than full scene
+            cloud_px = int((scene.cloud_cover / 100.0) * height * width * 0.4)
             if cloud_px > 0:
                 cy, cx = np.random.randint(0, height), np.random.randint(0, width)
                 y_idx, x_idx = np.ogrid[:height, :width]
                 dist = np.sqrt((y_idx - cy) ** 2 + (x_idx - cx) ** 2)
-                scl[dist < np.sqrt(cloud_px / np.pi)] = 8 # medium cloud
+                scl[dist < np.sqrt(cloud_px / np.pi)] = 8
 
         return {
             "B02": b02,
@@ -116,3 +187,4 @@ class EarthSearchProvider(ImageryProvider):
             "B12": b12,
             "SCL": scl,
         }
+

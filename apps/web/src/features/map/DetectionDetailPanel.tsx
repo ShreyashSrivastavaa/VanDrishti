@@ -64,6 +64,11 @@ export const DetectionDetailPanel: React.FC<DetectionDetailProps> = ({ detection
           <span className="font-serif font-semibold text-sm text-forest-900">
             Suspected Forest Loss
           </span>
+          {detection.isDemo && (
+            <span className="bg-amber-600 text-white font-mono text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+              DEMO
+            </span>
+          )}
         </div>
         <button
           onClick={onClose}

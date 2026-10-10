@@ -6,6 +6,16 @@ import { query } from '../db/client.js';
 
 const router = Router();
 
+// Helper to resolve absolute artifact URLs when ARTIFACT_PUBLIC_BASE_URL is configured
+export function resolveArtifactUrl(uri: string | null | undefined): string | null {
+  if (!uri) return null;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
+  const baseUrl = process.env.ARTIFACT_PUBLIC_BASE_URL;
+  if (!baseUrl) return uri;
+  const cleanUri = uri.startsWith('/') ? uri : `/${uri}`;
+  return `${baseUrl.replace(/\/$/, '')}${cleanUri}`;
+}
+
 // Rate limiter for sampling endpoint
 const sampleLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -52,7 +62,8 @@ router.get('/aois/:slug/observations', async (req: Request, res: Response, next)
         CASE WHEN fm.overlay_uri IS NOT NULL THEN REPLACE(fm.overlay_uri, 'forest_mask.png', 'density_overlay.png') ELSE NULL END AS "densityOverlayUri",
         CASE WHEN fm.overlay_uri IS NOT NULL THEN REPLACE(fm.overlay_uri, 'forest_mask.png', 'density.tif') ELSE NULL END AS "densityCogUri",
         mv.name AS "modelName",
-        mv.status AS "modelStatus"
+        mv.status AS "modelStatus",
+        COALESCE(o.is_demo, false) AS "isDemo"
       FROM observations o
       JOIN aois a ON o.aoi_id = a.id
       LEFT JOIN forest_masks fm ON o.id = fm.observation_id
@@ -78,7 +89,14 @@ router.get('/aois/:slug/observations', async (req: Request, res: Response, next)
     sql += ` ORDER BY o.acquired_at ASC;`;
 
     const { rows } = await query(sql, params);
-    res.json(rows);
+    const mappedRows = rows.map((r: any) => ({
+      ...r,
+      previewUri: resolveArtifactUrl(r.previewUri),
+      forestOverlayUri: resolveArtifactUrl(r.forestOverlayUri),
+      densityOverlayUri: resolveArtifactUrl(r.densityOverlayUri),
+      densityCogUri: resolveArtifactUrl(r.densityCogUri),
+    }));
+    res.json(mappedRows);
   } catch (err) {
     next(err);
   }
@@ -116,7 +134,8 @@ router.get('/observations/:id', async (req: Request, res: Response, next) => {
         ) AS "densityCogUri",
         mv.name AS "modelName",
         mv.version AS "modelVersion",
-        mv.status AS "modelStatus"
+        mv.status AS "modelStatus",
+        COALESCE(o.is_demo, false) AS "isDemo"
       FROM observations o
       LEFT JOIN forest_masks fm ON o.id = fm.observation_id
       LEFT JOIN model_versions mv ON fm.model_version_id = mv.id
@@ -129,7 +148,14 @@ router.get('/observations/:id', async (req: Request, res: Response, next) => {
       });
     }
 
-    res.json(rows[0]);
+    const row = rows[0];
+    res.json({
+      ...row,
+      previewUri: resolveArtifactUrl(row.previewUri),
+      forestOverlayUri: resolveArtifactUrl(row.forestOverlayUri),
+      densityOverlayUri: resolveArtifactUrl(row.densityOverlayUri),
+      densityCogUri: resolveArtifactUrl(row.densityCogUri),
+    });
   } catch (err) {
     next(err);
   }

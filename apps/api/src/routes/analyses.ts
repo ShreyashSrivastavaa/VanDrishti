@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../db/client.js';
 import { enqueueJob } from '../services/queueService.js';
+import { resolveArtifactUrl } from './observations.js';
 import crypto from 'crypto';
 
 const router = Router();
@@ -26,7 +27,8 @@ router.get('/aois/:slug/analyses', async (req: Request, res: Response, next) => 
         to_char(o1.acquired_at, 'YYYY-MM-DD') AS "dateT1",
         mv.name AS "modelName",
         mv.version AS "modelVersion",
-        mv.status AS "modelStatus"
+        mv.status AS "modelStatus",
+        COALESCE(an.is_demo, false) AS "isDemo"
       FROM analyses an
       JOIN aois a ON an.aoi_id = a.id
       JOIN observations o0 ON an.obs_t0 = o0.id
@@ -184,6 +186,7 @@ router.get('/analyses/:id', async (req: Request, res: Response, next) => {
         an.total_loss_ha AS "totalLossHa",
         an.detection_count AS "detectionCount",
         an.warnings,
+        COALESCE(an.is_demo, false) AS "isDemo",
         an.created_at AS "createdAt",
         an.finished_at AS "finishedAt",
         a.slug AS "aoiSlug",
@@ -220,7 +223,12 @@ router.get('/analyses/:id', async (req: Request, res: Response, next) => {
       });
     }
 
-    res.json(rows[0]);
+    const row = rows[0];
+    res.json({
+      ...row,
+      previewUriT0: resolveArtifactUrl(row.previewUriT0),
+      previewUriT1: resolveArtifactUrl(row.previewUriT1),
+    });
   } catch (err) {
     next(err);
   }
@@ -246,6 +254,7 @@ router.get('/analyses/:id/detections', async (req: Request, res: Response, next)
         confidence_class AS "confidenceClass",
         is_calibrated_confidence AS "isCalibratedConfidence",
         explanation,
+        COALESCE(is_demo, false) AS "isDemo",
         ST_AsGeoJSON(geom)::json AS geometry,
         ST_AsGeoJSON(centroid)::json AS centroid_geo
       FROM detections
@@ -286,6 +295,7 @@ router.get('/analyses/:id/detections', async (req: Request, res: Response, next)
           confidenceClass: r.confidenceClass,
           isCalibratedConfidence: r.isCalibratedConfidence,
           explanation: r.explanation,
+          isDemo: r.isDemo,
           centroid: r.centroid_geo?.coordinates || null,
         },
       })),
@@ -305,6 +315,7 @@ router.get('/analyses/:id/export.geojson', async (req: Request, res: Response, n
     const { rows: anRows } = await query(`
       SELECT 
         an.id, an.total_loss_ha, an.detection_count, an.warnings, an.created_at,
+        COALESCE(an.is_demo, false) AS is_demo,
         to_char(o0.acquired_at, 'YYYY-MM-DD') AS date_t0,
         to_char(o1.acquired_at, 'YYYY-MM-DD') AS date_t1,
         a.name AS aoi_name, a.slug AS aoi_slug, a.country_code,
@@ -326,7 +337,7 @@ router.get('/analyses/:id/export.geojson', async (req: Request, res: Response, n
       SELECT 
         id, area_ha, mean_p_loss, mean_ndvi_drop, valid_fraction_t0, valid_fraction_t1,
         confirmed_persistent, confidence_score, confidence_class, is_calibrated_confidence,
-        explanation, ST_AsGeoJSON(geom)::json AS geometry
+        explanation, COALESCE(is_demo, false) AS is_demo, ST_AsGeoJSON(geom)::json AS geometry
       FROM detections
       WHERE analysis_id = $1
       ORDER BY area_ha DESC;
@@ -342,10 +353,11 @@ router.get('/analyses/:id/export.geojson', async (req: Request, res: Response, n
         observationDateT1: analysis.date_t1,
         totalLossHa: parseFloat(analysis.total_loss_ha || 0),
         detectionCount: parseInt(analysis.detection_count || 0, 10),
+        isDemo: analysis.is_demo,
         modelStatus: analysis.model_status,
         modelVersion: `${analysis.model_name}@${analysis.model_version}`,
         licence: 'Creative Commons Attribution 4.0 International (CC BY 4.0)',
-        attribution: 'ForestWatch AI — Contains modified Copernicus Sentinel data [2020-2024]',
+        attribution: 'VanDrishti — Contains modified Copernicus Sentinel data [2020-2024]',
         languageDisciplineNotice: 'All detections represent suspected forest loss / spectral change and should not be construed as confirmed legal deforestation without ground validation.',
         generatedAt: new Date().toISOString(),
       },

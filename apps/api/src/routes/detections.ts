@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../db/client.js';
+import { resolveArtifactUrl } from './observations.js';
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.get('/:id', async (req: Request, res: Response, next) => {
         d.confidence_class AS "confidenceClass",
         d.is_calibrated_confidence AS "isCalibratedConfidence",
         d.explanation,
+        COALESCE(d.is_demo, false) AS "isDemo",
         d.created_at AS "createdAt",
         ST_AsGeoJSON(d.geom)::json AS geometry,
         ST_AsGeoJSON(d.centroid)::json AS centroid,
@@ -50,7 +52,12 @@ router.get('/:id', async (req: Request, res: Response, next) => {
       });
     }
 
-    res.json(rows[0]);
+    const row = rows[0];
+    res.json({
+      ...row,
+      previewUriT0: resolveArtifactUrl(row.previewUriT0),
+      previewUriT1: resolveArtifactUrl(row.previewUriT1),
+    });
   } catch (err) {
     next(err);
   }

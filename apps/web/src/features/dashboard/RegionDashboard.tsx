@@ -113,6 +113,16 @@ export const RegionDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* DEMO mode notice if aoi.isDemo or latestAnalysis?.isDemo */}
+      {(aoi.isDemo || latestAnalysis?.isDemo) && (
+        <div className="flex items-center gap-2.5 px-4 py-2.5 bg-amber-50 border border-amber-300 text-amber-950 text-xs rounded font-medium">
+          <span className="bg-amber-600 text-white font-mono text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+            DEMO DATA
+          </span>
+          <span>Observations and change detection metrics in this region contain illustrative / synthetic test data. Ground validation is pending.</span>
+        </div>
+      )}
+
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3 bg-surface border border-rule rounded">

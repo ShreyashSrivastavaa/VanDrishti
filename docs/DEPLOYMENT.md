@@ -103,3 +103,27 @@ To restore:
 ```bash
 docker compose exec -T postgis pg_restore -U forestwatch -d forestwatch --clean < backup_file.dump
 ```
+
+---
+
+## 5. Cloud Platform Deployment (Vercel & Render)
+
+For cloud deployments spanning Vercel (Frontend) and Render (Backend API + ML Worker):
+
+### Render (API & Background Worker)
+Set the following Environment Variables in the Render dashboard:
+- `DATABASE_URL`: Managed PostgreSQL connection string (with PostGIS enabled).
+- `CORS_ALLOWED_ORIGINS`: `https://vandrishti-v4sx.vercel.app` (or custom domain).
+- `ARTIFACT_STORE`: `s3` (Render ephemeral disk wipes `./data/artifacts` on restarts/re-deploys).
+- `S3_ENDPOINT`: Cloudflare R2 or AWS S3 endpoint URL (e.g. `https://<account-id>.r2.cloudflarestorage.com`).
+- `S3_BUCKET`: `vandrishti-artifacts`
+- `S3_ACCESS_KEY_ID`: Your S3/R2 access key ID.
+- `S3_SECRET_ACCESS_KEY`: Your S3/R2 secret access key.
+- `ARTIFACT_PUBLIC_BASE_URL`: Public HTTPS URL or CDN domain serving artifacts (e.g. `https://artifacts.vandrishti.org` or `https://pub-<id>.r2.dev`).
+- `TREECOVER_COG_URL`: Direct HTTPS URL to the India National Tree Cover Cloud-Optimized GeoTIFF (`india_tree_cover_density.tif`).
+
+### Vercel (Web Frontend)
+Set the following Environment Variables in Vercel project settings:
+- `VITE_API_BASE_URL`: `https://vandrishti.onrender.com/api/v1`
+- `VITE_TREECOVER_PMTILES_URL`: `https://artifacts.vandrishti.org/national_layer/india_tree_cover.pmtiles`
+- `VITE_MAPTILER_API_KEY`: (Optional) Free MapTiler vector basemap key.

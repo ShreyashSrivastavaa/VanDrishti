@@ -98,6 +98,7 @@ export const ObservationSchema = z.object({
   densityCogUri: z.string().nullable().optional(),
   modelName: z.string().nullable().optional(),
   modelStatus: z.string().nullable().optional(),
+  isDemo: z.boolean().default(false),
 });
 export type Observation = z.infer<typeof ObservationSchema>;
 
@@ -177,6 +178,7 @@ export const AnalysisSchema = z.object({
   totalLossHa: z.number().nonnegative().nullable(),
   detectionCount: z.number().int().nonnegative().nullable(),
   warnings: z.array(z.string()).default([]),
+  isDemo: z.boolean().default(false),
   createdAt: z.string().datetime(),
   finishedAt: z.string().datetime().nullable().optional(),
   model: ModelVersionSchema.optional(),
@@ -200,6 +202,7 @@ export const DetectionSchema = z.object({
   confidenceClass: ConfidenceClassSchema,
   isCalibratedConfidence: z.boolean().default(false),
   explanation: z.string(),
+  isDemo: z.boolean().default(false),
   createdAt: z.string().datetime(),
 });
 export type Detection = z.infer<typeof DetectionSchema>;

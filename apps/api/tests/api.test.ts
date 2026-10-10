@@ -11,6 +11,19 @@ describe('ForestWatch API Core Endpoints', () => {
     expect(res.body.version).toBe('0.1.0');
   });
 
+  it('GET /api/v1/health/data returns data integrity ledger with observation counts and COG status', async () => {
+    const res = await request(app).get('/api/v1/health/data');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ok');
+    expect(res.body).toHaveProperty('observations');
+    expect(res.body.observations).toHaveProperty('realCount');
+    expect(res.body.observations).toHaveProperty('demoCount');
+    expect(res.body).toHaveProperty('treeCoverCog');
+    expect(res.body.treeCoverCog).toHaveProperty('configured');
+    expect(res.body.treeCoverCog).toHaveProperty('readable');
+    expect(res.body).toHaveProperty('artifactStore');
+  });
+
   it('GET /api/v1/config returns public configuration and attributions', async () => {
     const res = await request(app).get('/api/v1/config');
     expect(res.status).toBe(200);

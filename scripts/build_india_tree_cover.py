@@ -17,6 +17,17 @@ National and international boundaries are delegated to the neutral basemap provi
 
 import os
 import sys
+
+# Configure PROJ environment before rasterio/GDAL initialization
+try:
+    import rasterio
+    _proj_path = os.path.join(os.path.dirname(rasterio.__file__), "proj_data")
+    if os.path.exists(_proj_path):
+        os.environ["PROJ_LIB"] = _proj_path
+        os.environ["PROJ_DATA"] = _proj_path
+except Exception:
+    pass
+
 import json
 import argparse
 import datetime
@@ -163,24 +174,40 @@ def build_sample_cog_and_metadata(output_dir: Path, bbox: Tuple[float, float, fl
     cog_path = output_dir / "india_tree_cover_density.tif"
     meta_path = output_dir / "metadata.json"
 
-    # Create a compact synthetic ~30m density raster for India sample
+    # Create a compact ~30m density raster for India sample with true geographic coordinate mapping
     h, w = 300, 300
-    density = np.full((h, w), 255, dtype=np.uint8) # default nodata
+    density = np.full((h, w), 255, dtype=np.uint8) # default nodata (255)
 
-    # Draw gradient areas representing Western Ghats (high density 75-95%) and Central India (20-50%)
+    min_lon, min_lat, max_lon, max_lat = bbox
+    d_lat = (max_lat - min_lat) / h
+    d_lon = (max_lon - min_lon) / w
+
     for i in range(h):
+        lat = max_lat - (i + 0.5) * d_lat
         for j in range(w):
-            # Simulated peninsular land area
-            if 30 <= i <= 270 and 40 <= j <= 260:
-                # Western Ghats corridor on the left
-                if 80 <= i <= 250 and 50 <= j <= 90:
-                    density[i, j] = int(np.clip(70 + 25 * np.sin(i / 15.0), 10, 98))
-                # Central / Deciduous forest
-                elif 70 <= i <= 180 and 110 <= j <= 210:
-                    density[i, j] = int(np.clip(35 + 20 * np.cos(j / 20.0), 10, 65))
-                # Open plains / non-forest
-                else:
-                    density[i, j] = int(np.clip(5 + 4 * np.sin(i * j), 0, 9))
+            lon = min_lon + (j + 0.5) * d_lon
+
+            # 1. Marine / Ocean water bodies -> nodata (255)
+            # Arabian Sea (west of 72.5 E and south of 22 N)
+            # Bay of Bengal (east of 82.0 E and south of 19 N)
+            # Indian Ocean (south of 8.0 N)
+            if (lon < 72.5 and lat < 22.0) or (lon > 82.0 and lat < 19.0) or lat < 8.0:
+                density[i, j] = 255
+            # 2. Thar Desert / Arid Rajasthan (lat 24-28.5, lon 69.5-73.0) -> ~1%
+            elif 24.0 <= lat <= 28.5 and 69.5 <= lon <= 73.0:
+                density[i, j] = 1
+            # 3. Western Ghats high canopy corridor (lat 8.5-19.5, lon 73.5-76.0) -> 75-95%
+            elif 8.5 <= lat <= 19.5 and 73.5 <= lon <= 76.0:
+                density[i, j] = int(np.clip(75 + 18 * np.sin(lat * 2.1), 60, 95))
+            # 4. Northeast / Meghalaya / Assam foothills (lat 24.0-28.5, lon 89.0-96.0) -> 65-92%
+            elif 24.0 <= lat <= 28.5 and 89.0 <= lon <= 96.0:
+                density[i, j] = int(np.clip(70 + 20 * np.cos(lon * 1.2), 55, 92))
+            # 5. Central India deciduous belt (lat 19.0-24.5, lon 76.5-83.5) -> 20-50%
+            elif 19.0 <= lat <= 24.5 and 76.5 <= lon <= 83.5:
+                density[i, j] = int(np.clip(32 + 15 * np.sin(lat + lon), 15, 52))
+            # 6. Plains, agriculture, urban settlements -> 3-12%
+            else:
+                density[i, j] = int(np.clip(6 + 4 * np.sin(i * j), 2, 14))
 
     # Export using rasterio if available
     try:
