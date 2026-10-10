@@ -1,0 +1,34 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+Copyright (C) 2026 ForestWatch AI Contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+SEPARATE DATA LICENCES & ATTRIBUTIONS:
+1. Copernicus Sentinel-2 Data:
+   Contains modified Copernicus Sentinel data [2021-2024].
+   Free, full and open access under the Copernicus Sentinel Data Policy.
+2. ESA WorldCover 10m 2020/2021:
+   Creative Commons Attribution 4.0 International (CC BY 4.0).
+   Zanaga et al. (2021/2022).
+3. Hansen / UMD / GLAD Global Forest Change:
+   Creative Commons Attribution 4.0 International (CC BY 4.0).
+   Hansen et al. (2013).
+4. OpenStreetMap Nominatim Geocoding:
+   Open Data Commons Open Database License (ODbL) by OpenStreetMap Foundation.
+5. OpenFreeMap Vector Basemaps:
+   OpenStreetMap data (ODbL) rendered via OpenFreeMap.

@@ -1,0 +1,85 @@
+# Curated Areas of Interest (AOIs) for ForestWatch AI
+# All bounding boxes are verified against real biomes, real Sentinel-2 tiles, and are strictly <= 500 km²
+
+aois:
+  - slug: "rondonia-jamari"
+    name: "Rondônia — Jamari Forest Frontier"
+    country_code: "BRA"
+    country_name: "Brazil"
+    biome: "Amazon Tropical Rainforest"
+    utm_zone: 20
+    utm_epsg: 32720
+    area_km2: 439.24
+    bbox: [-63.25, -9.60, -63.05, -9.42]
+    rationale: >
+      Located in the Jamari national forest borderlands in northern Rondônia, Brazil.
+      Characterized by rapid expanding agricultural access roads, pasture conversion,
+      and classic 'fishbone' deforestation dynamics intersecting tropical moist evergreen forest.
+
+  - slug: "mato-grosso-sinop"
+    name: "Mato Grosso — Sinop Agricultural Border"
+    country_code: "BRA"
+    country_name: "Brazil"
+    biome: "Amazon-Cerrado Ecotone"
+    utm_zone: 21
+    utm_epsg: 32721
+    area_km2: 484.30
+    bbox: [-55.65, -11.95, -55.45, -11.75]
+    rationale: >
+      A transitional ecotone between humid Amazonian high canopy forest and Cerrado scrub-woodlands.
+      Exhibits large rectilinear clearings for mechanized soy cultivation and cattle ranching,
+      offering distinct high-contrast geometric change patterns.
+
+  - slug: "madre-de-dios-inambari"
+    name: "Madre de Dios — Inambari Alluvial Basin"
+    country_code: "PER"
+    country_name: "Peru"
+    biome: "Southwest Amazon Moist Forests"
+    utm_zone: 19
+    utm_epsg: 32719
+    area_km2: 307.53
+    bbox: [-70.35, -12.95, -70.18, -12.80]
+    rationale: >
+      Inambari river basin in Peru. Known for heavy alluvial gold mining activity along river bends,
+      causing patchy, irregular canopy removal, standing pool turbidity, and high soil disturbance.
+
+  - slug: "kalimantan-kahayan"
+    name: "Central Kalimantan — Kahayan Peatlands"
+    country_code: "IDN"
+    country_name: "Indonesia"
+    biome: "Borneo Peat Swamp Forest"
+    utm_zone: 49
+    utm_epsg: 32749
+    area_km2: 370.82
+    bbox: [113.80, -2.45, 114.00, -2.30]
+    rationale: >
+      Tropical peat swamp forest adjacent to the Kahayan basin. Prone to dry-season drainage canal
+      clearance, oil palm plantation expansion, and peat fire susceptibility, presenting critical
+      spectral challenges in distinguishing burnt peat from cleared canopy.
+
+  - slug: "western-ghats-shimoga"
+    name: "Western Ghats — Sharavathi Basin"
+    country_code: "IND"
+    country_name: "India"
+    biome: "Tropical Montane Wet Evergreen"
+    utm_zone: 43
+    utm_epsg: 32643
+    area_km2: 305.86
+    bbox: [74.75, 14.10, 74.92, 14.25]
+    rationale: >
+      A global biodiversity hotspot in Karnataka, India. Subject to linear infrastructure encroachment,
+      plantation expansion (arecanut/rubber), and seasonal monsoon cloud coverage testing cloud-masking
+      reliability and steep topographic relief.
+
+  - slug: "vasterbotten-vindeln"
+    name: "Västerbotten — Vindeln Boreal Managed Forest"
+    country_code: "SWE"
+    country_name: "Sweden"
+    biome: "Scandinavian Boreal Taiga"
+    utm_zone: 34
+    utm_epsg: 32634
+    area_km2: 242.08
+    bbox: [19.55, 64.15, 19.85, 64.30]
+    rationale: >
+      Temperate and boreal conifer clear-cut forestry testing model generalization outside the tropics.
+      Provides high-latitude low-sun-angle imagery, snow/ice seasonality, and rotational patch harvesting.

@@ -1,0 +1,23 @@
+# Training and Evaluation Regions for ForestWatch AI
+
+regions:
+  - id: "train_amazon_01"
+    name: "Rondônia Training Block"
+    biome: "Amazon Rainforest"
+    bbox: [-63.50, -10.00, -62.80, -9.20]
+    split_strategy: "geographic_blocks_10km"
+    tile_ids: ["20LKP", "20LLP"]
+
+  - id: "train_borneo_01"
+    name: "Kalimantan Training Block"
+    biome: "Tropical Peat Swamp"
+    bbox: [113.50, -2.70, 114.20, -2.00]
+    split_strategy: "geographic_blocks_10km"
+    tile_ids: ["50MRA", "50MRB"]
+
+  - id: "holdout_boreal_01"
+    name: "Sweden Boreal Holdout"
+    biome: "Boreal Taiga"
+    bbox: [19.00, 64.00, 20.00, 64.50]
+    split_strategy: "full_biome_holdout"
+    tile_ids: ["34VEP"]

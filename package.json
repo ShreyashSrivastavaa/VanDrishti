@@ -1,0 +1,21 @@
+{
+  "name": "forestwatch-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public-interest web platform for exploring forest cover and monitoring suspected forest loss from Sentinel-2 imagery",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run --workspaces build",
+    "dev": "npm run dev --workspace=@forestwatch/api & npm run dev --workspace=@forestwatch/web",
+    "lint": "npm run --workspaces lint",
+    "test": "npm run --workspaces test",
+    "typecheck": "npm run --workspaces typecheck"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5"
+  }
+}

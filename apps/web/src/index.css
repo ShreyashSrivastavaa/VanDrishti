@@ -1,0 +1,84 @@
+@import "@fontsource/source-serif-4/400.css";
+@import "@fontsource/source-serif-4/600.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #F6F3EA;
+  --surface: #FBF9F3;
+  --ink: #1B201C;
+  --ink-muted: #5B605A;
+  --rule: #D8D3C4;
+  --forest-900: #1E3A2A;
+  --forest-700: #2F5A3E;
+  --olive-600: #6E7541;
+  --olive-200: #CBCFA9;
+  --stone-500: #8B8E84;
+  --loss-600: #B5402B;
+  --loss-200: #EBC3B6;
+  --warn-500: #C27A1E;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom tabular mono styling */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Accessible visible focus ring */
+:focus-visible {
+  outline: 2px solid var(--forest-700);
+  outline-offset: 2px;
+}
+
+/* Diagonal hatch pattern for color-blind safe loss rendering */
+.hatch-pattern {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(181, 64, 43, 0.25),
+    rgba(181, 64, 43, 0.25) 4px,
+    rgba(235, 195, 182, 0.4) 4px,
+    rgba(235, 195, 182, 0.4) 8px
+  );
+}
+
+/* Subtle clean scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--stone-500);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

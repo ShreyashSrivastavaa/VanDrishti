@@ -1,0 +1,71 @@
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: forestwatch-postgis
+    environment:
+      POSTGRES_USER: forestwatch
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: forestwatch
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forestwatch -d forestwatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    container_name: forestwatch-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgres://forestwatch:devpassword@postgis:5432/forestwatch
+      PUBLIC_WEB_ORIGIN: http://localhost:5173
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      ARTIFACT_STORE: local
+      ARTIFACT_LOCAL_DIR: /app/data/artifacts
+    volumes:
+      - ./data/artifacts:/app/data/artifacts
+    depends_on:
+      postgis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.worker
+    container_name: forestwatch-worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://forestwatch:devpassword@postgis:5432/forestwatch
+      ARTIFACT_STORE: local
+      ARTIFACT_LOCAL_DIR: /app/data/artifacts
+      MODEL_DEVICE: cpu
+    volumes:
+      - ./data/artifacts:/app/data/artifacts
+    depends_on:
+      postgis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.web
+    container_name: forestwatch-web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  postgis_data:
+  artifact_data:

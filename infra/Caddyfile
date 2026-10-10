@@ -1,0 +1,23 @@
+{
+    email admin@forestwatch.org
+}
+
+forestwatch.example.org {
+    encode gzip zstd
+
+    # API endpoints
+    handle /api/* {
+        reverse_proxy api:4000
+    }
+
+    # Static artifacts
+    handle /artifacts/* {
+        root * /data
+        file_server
+    }
+
+    # Web SPA
+    handle {
+        reverse_proxy web:80
+    }
+}

@@ -1,0 +1,33 @@
+# Change Detection & Forest Classification Parameters
+
+# Hysteresis classification thresholds
+t_high: 0.70         # Threshold for candidate forest at t0 (p_forest >= t_high)
+t_low: 0.30          # Threshold for non-forest at t1 (p_forest <= t_low)
+
+# Minimum mapping unit (MMU) in hectares
+# Components smaller than this are filtered out as noise/salt-and-pepper
+min_mapping_unit_ha: 0.50
+
+# Spectral sanity drop requirements
+min_ndvi_drop: 0.15   # Must experience at least a 0.15 drop in NDVI
+min_nbr_drop: 0.10    # Normalized burn ratio drop consistent with vegetation removal
+
+# Phenology and Seasonality guard
+# Warn if day-of-year difference between non-consecutive dates exceeds this window
+season_tolerance_days: 45
+
+# SCL Quality thresholds
+min_valid_fraction: 0.70    # Fraction of AOI pixels that must be clear land
+max_scene_cloud_cover: 60   # Maximum scene-level cloud cover to consider
+scl_dilation_px: 2          # Radius to dilate cloud and cloud shadow masks
+
+# Confidence scoring thresholds
+confidence:
+  high:
+    min_mean_p_loss: 0.75
+    min_area_ha: 1.5
+    min_valid_fraction: 0.85
+  medium:
+    min_mean_p_loss: 0.60
+    min_area_ha: 0.5
+    min_valid_fraction: 0.70
