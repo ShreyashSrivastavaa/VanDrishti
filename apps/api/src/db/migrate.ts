@@ -17,7 +17,10 @@ export async function runMigrations() {
       );
     `);
 
-    const migrationsDir = path.resolve(process.cwd(), 'apps/api/migrations');
+    let migrationsDir = path.resolve(process.cwd(), 'migrations');
+    if (!fs.existsSync(migrationsDir)) {
+      migrationsDir = path.resolve(process.cwd(), 'apps/api/migrations');
+    }
     if (!fs.existsSync(migrationsDir)) {
       throw new Error(`Migrations directory not found: ${migrationsDir}`);
     }

@@ -9,11 +9,15 @@ Stores validation metrics in the analysis_validation database table.
 
 import sys
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from services.ml.forestwatch_ml.worker.db import get_db_connection
 
 def validate_analyses():
-    conn = psycopg2.connect("postgres://postgres:postgres@localhost:5432/forestwatch", cursor_factory=RealDictCursor)
+    conn = get_db_connection()
     cur = conn.cursor()
 
     cur.execute("""

@@ -34,7 +34,7 @@ def process_next_job() -> bool:
         payload = job["payload"] if isinstance(job["payload"], dict) else json.loads(job["payload"])
         attempts = job["attempts"] + 1
 
-        print(f"[{datetime.utcnow().isoformat()}] Processing job {job_id} ({job_type}, attempt {attempts})...")
+        print(f"[{datetime.utcnow().isoformat()}] Processing job {job_id} ({job_type}, attempt {attempts})...", flush=True)
 
         cur.execute("""
             UPDATE jobs

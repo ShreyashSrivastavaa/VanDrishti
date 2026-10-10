@@ -6,6 +6,7 @@ class MLSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     database_url: str = "postgres://postgres:postgres@localhost:5432/forestwatch"
+    database_ssl: bool = False
     imagery_provider: str = "earth-search"
     earth_search_url: str = "https://earth-search.aws.element84.com/v1"
     cdse_client_id: Optional[str] = None

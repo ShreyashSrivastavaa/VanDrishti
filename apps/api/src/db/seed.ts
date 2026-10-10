@@ -153,7 +153,10 @@ export async function seedDatabase() {
     console.log(`Seeded ${initialModels.length} model registry entries.`);
 
     // 3. Seed Curated AOIs from config/aois.yaml
-    const aoisYamlPath = path.resolve(process.cwd(), 'config/aois.yaml');
+    let aoisYamlPath = path.resolve(process.cwd(), 'config/aois.yaml');
+    if (!fs.existsSync(aoisYamlPath)) {
+      aoisYamlPath = path.resolve(process.cwd(), '../../config/aois.yaml');
+    }
     if (!fs.existsSync(aoisYamlPath)) {
       throw new Error(`AOI config not found at: ${aoisYamlPath}`);
     }

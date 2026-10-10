@@ -7,11 +7,16 @@ Enqueues 'run_change_analysis' jobs for each curated AOI between observation dat
 
 import hashlib
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import sys
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from services.ml.forestwatch_ml.worker.db import get_db_connection
 
 def main():
-    conn = psycopg2.connect("postgres://postgres:postgres@localhost:5432/forestwatch", cursor_factory=RealDictCursor)
+    conn = get_db_connection()
     cur = conn.cursor()
 
     cur.execute("SELECT id FROM model_versions WHERE name = 'spectral_baseline' LIMIT 1")
