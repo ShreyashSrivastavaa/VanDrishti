@@ -91,8 +91,26 @@ export const ObservationSchema = z.object({
   provenance: ProvenanceSchema.optional(),
   status: ObservationStatusSchema,
   error: z.string().nullable().optional(),
+  forestAreaHa: z.number().nullable().optional(),
+  forestFraction: z.number().nullable().optional(),
+  forestOverlayUri: z.string().nullable().optional(),
+  densityOverlayUri: z.string().nullable().optional(),
+  densityCogUri: z.string().nullable().optional(),
+  modelName: z.string().nullable().optional(),
+  modelStatus: z.string().nullable().optional(),
 });
 export type Observation = z.infer<typeof ObservationSchema>;
+
+export const DensitySampleResultSchema = z.object({
+  lat: z.number(),
+  lon: z.number(),
+  density: z.number().nullable(),
+  isCloudOrNodata: z.boolean(),
+  acquiredAt: z.string().optional(),
+  modelName: z.string().optional(),
+  modelStatus: z.string().optional(),
+});
+export type DensitySampleResult = z.infer<typeof DensitySampleResultSchema>;
 
 export const ModelVersionSchema = z.object({
   id: z.string().uuid(),
@@ -121,6 +139,8 @@ export const ForestMaskSchema = z.object({
   probUri: z.string().nullable().optional(),
   maskUri: z.string().nullable().optional(),
   overlayUri: z.string().nullable().optional(),
+  densityOverlayUri: z.string().nullable().optional(),
+  densityCogUri: z.string().nullable().optional(),
 });
 export type ForestMask = z.infer<typeof ForestMaskSchema>;
 

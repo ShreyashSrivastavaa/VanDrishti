@@ -8,6 +8,12 @@ from ..providers.earth_search import EarthSearchProvider
 from ..preprocessing.masking import create_scl_mask, compute_quality_metrics
 from ..preprocessing.indices import compute_ndvi, compute_nbr
 from ..preprocessing.preview import render_rgb_preview, render_forest_overlay, render_loss_overlay
+from ..preprocessing.density import (
+    compute_focal_density,
+    render_density_overlay,
+    export_density_cog,
+    export_density_raw,
+)
 from ..models.spectral_baseline import SpectralBaselineModel
 from ..change.detect import ChangeDetector
 from ..change.polygonise import polygonise_components
@@ -72,6 +78,20 @@ def handle_ingest_observations(payload: Dict[str, Any]) -> Dict[str, Any]:
             overlay_rel_path = f"observations/{aoi['slug']}/{acquired_at.isoformat()}/forest_mask.png"
             forest_overlay_uri = artifact_store.write_bytes(overlay_rel_path, overlay_bytes)
 
+            # Compute Tree Cover Density (11x11 moving window focal mean, valid-pixel-aware)
+            density = compute_focal_density(forest_mask, ~masked, window_size=11)
+            density_overlay_bytes = render_density_overlay(density, ~masked, alpha_val=0.85)
+            density_overlay_rel_path = f"observations/{aoi['slug']}/{acquired_at.isoformat()}/density_overlay.png"
+            density_overlay_uri = artifact_store.write_bytes(density_overlay_rel_path, density_overlay_bytes)
+
+            density_cog_bytes = export_density_cog(density)
+            density_cog_rel_path = f"observations/{aoi['slug']}/{acquired_at.isoformat()}/density.tif"
+            density_cog_uri = artifact_store.write_bytes(density_cog_rel_path, density_cog_bytes)
+
+            density_raw_bytes = export_density_raw(density)
+            density_raw_rel_path = f"observations/{aoi['slug']}/{acquired_at.isoformat()}/density.raw"
+            artifact_store.write_bytes(density_raw_rel_path, density_raw_bytes)
+
             stats = model.compute_summary_statistics(p_forest)
 
             preview_bounds = [
@@ -123,21 +143,23 @@ def handle_ingest_observations(payload: Dict[str, Any]) -> Dict[str, Any]:
             obs_row = cur.fetchone()
             obs_id = obs_row["id"]
 
-            # Upsert forest mask
+            # Upsert forest mask with density overlay and COG
             if model_version_id:
                 cur.execute("""
                     INSERT INTO forest_masks (
                         observation_id, model_version_id, forest_area_ha, forest_fraction,
-                        mean_confidence, valid_fraction, overlay_uri
+                        mean_confidence, valid_fraction, overlay_uri, density_overlay_uri, density_cog_uri
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (observation_id, model_version_id)
                     DO UPDATE SET
                         forest_area_ha = EXCLUDED.forest_area_ha,
                         forest_fraction = EXCLUDED.forest_fraction,
                         mean_confidence = EXCLUDED.mean_confidence,
                         valid_fraction = EXCLUDED.valid_fraction,
-                        overlay_uri = EXCLUDED.overlay_uri
+                        overlay_uri = EXCLUDED.overlay_uri,
+                        density_overlay_uri = EXCLUDED.density_overlay_uri,
+                        density_cog_uri = EXCLUDED.density_cog_uri
                 """, (
                     obs_id,
                     model_version_id,
@@ -146,6 +168,8 @@ def handle_ingest_observations(payload: Dict[str, Any]) -> Dict[str, Any]:
                     stats["mean_confidence"],
                     quality["valid_fraction"],
                     forest_overlay_uri,
+                    density_overlay_uri,
+                    density_cog_uri,
                 ))
 
             ingested_count += 1

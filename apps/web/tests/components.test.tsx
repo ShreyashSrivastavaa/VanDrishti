@@ -36,6 +36,29 @@ describe('Web UI Components', () => {
     expect(screen.getByText(/color-blind safety/i)).toBeDefined();
   });
 
+  it('MapLegend renders Tree Cover Density gradient, scale stops, and model status caveat', () => {
+    render(
+      <MapLegend
+        showDensity={true}
+        showSatellite={false}
+        showForestMask={false}
+        showLoss={true}
+        showAoiBoundaries={true}
+        modelName="spectral_baseline"
+        modelStatus="baseline"
+        observationDate="2023-08-18"
+      />
+    );
+
+    expect(screen.getByText(/Tree cover density \(~100 m window\)/i)).toBeDefined();
+    expect(screen.getByText(/^0%$/)).toBeDefined();
+    expect(screen.getByText(/^25%$/)).toBeDefined();
+    expect(screen.getByText(/^50%$/)).toBeDefined();
+    expect(screen.getByText(/^75%$/)).toBeDefined();
+    expect(screen.getByText(/^100%$/)).toBeDefined();
+    expect(screen.getByText(/Share of pixels classified as forest by spectral_baseline, baseline\. Not a tree count\. Source: Sentinel-2 2023-08-18\./i)).toBeDefined();
+  });
+
   it('DetectionDetailPanel renders coordinates, area, dates, and explanation', () => {
     const mockDetection = {
       id: 'det-1234',

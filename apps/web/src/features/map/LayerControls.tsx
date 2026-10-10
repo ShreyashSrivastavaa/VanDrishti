@@ -11,6 +11,10 @@ interface LayerControlsProps {
   selectedObsT1: Observation | null;
   onSelectObsT0: (obs: Observation) => void;
   onSelectObsT1: (obs: Observation) => void;
+  showDensity: boolean;
+  onToggleDensity: () => void;
+  densityOpacity: number;
+  onChangeDensityOpacity: (val: number) => void;
   showSatellite: boolean;
   onToggleSatellite: () => void;
   satelliteOpacity: number;
@@ -38,6 +42,10 @@ export const LayerControls: React.FC<LayerControlsProps> = ({
   selectedObsT1,
   onSelectObsT0,
   onSelectObsT1,
+  showDensity,
+  onToggleDensity,
+  densityOpacity,
+  onChangeDensityOpacity,
   showSatellite,
   onToggleSatellite,
   satelliteOpacity,
@@ -202,6 +210,44 @@ export const LayerControls: React.FC<LayerControlsProps> = ({
         </div>
 
         <div className="space-y-2">
+          {/* Tree Cover Density */}
+          <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showDensity}
+                  onChange={onToggleDensity}
+                  className="rounded text-forest-900 accent-forest-900"
+                />
+                <span className="font-medium text-ink">Tree cover density</span>
+              </label>
+              <div 
+                className="w-4 h-3 rounded-[1px] border border-rule shadow-xs shrink-0" 
+                style={{
+                  background: 'linear-gradient(to right, #DDE5B8, #7FA65A, #0F3A22)',
+                }}
+                title="Continuous tree cover density ramp"
+              />
+            </div>
+            {showOpacityControls && showDensity && (
+              <div className="pt-1 flex items-center gap-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={densityOpacity}
+                  onChange={(e) => onChangeDensityOpacity(parseFloat(e.target.value))}
+                  className="w-full accent-forest-900 h-1 bg-rule rounded cursor-pointer"
+                />
+                <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
+                  {Math.round(densityOpacity * 100)}%
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Suspected Loss */}
           <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
             <div className="flex items-center justify-between">

@@ -6,10 +6,20 @@ import type {
   Detection, 
   DatasetSource, 
   GeocodeResult, 
-  TimeseriesPoint 
+  TimeseriesPoint,
+  DensitySampleResult
 } from '@forestwatch/shared';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+export function resolveArtifactUrl(uri?: string | null): string | null {
+  if (!uri) return null;
+  if (uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('data:')) {
+    return uri;
+  }
+  const base = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/api\/v1\/?$/, '');
+  return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
+}
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
@@ -47,6 +57,12 @@ export const api = {
 
   getAoiObservations: (slug: string, usableOnly = false) => 
     fetchJson<Observation[]>(`${API_BASE}/aois/${slug}/observations${usableOnly ? '?usable=true' : ''}`),
+
+  getObservation: (id: string) =>
+    fetchJson<Observation>(`${API_BASE}/observations/${id}`),
+
+  sampleDensity: (obsId: string, lat: number, lon: number) =>
+    fetchJson<DensitySampleResult>(`${API_BASE}/observations/${obsId}/sample?lat=${lat}&lon=${lon}`),
 
   getAoiTimeseries: (slug: string) => 
     fetchJson<TimeseriesPoint[]>(`${API_BASE}/aois/${slug}/timeseries`),
