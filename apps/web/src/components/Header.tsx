@@ -37,11 +37,11 @@ export const Header: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="font-serif font-semibold text-[15px] tracking-tight leading-none text-forest-900 group-hover:text-forest-700">
-              ForestWatch <span className="font-sans font-medium text-[11px] tracking-widest text-ink-muted uppercase ml-0.5">AI</span>
+            <span className="font-serif font-semibold text-[15px] tracking-tight leading-none text-forest-900 group-hover:text-forest-700 flex items-center gap-1.5">
+              VanDrishti <span className="font-sans font-medium text-[11px] tracking-normal text-olive-600">वन दृष्टि</span>
             </span>
             <span className="text-[10px] text-ink-muted tracking-wider uppercase font-mono mt-0.5">
-              Copernicus Sentinel-2 Observatory
+              India Tree Cover &amp; Forest Loss Observatory
             </span>
           </div>
         </Link>

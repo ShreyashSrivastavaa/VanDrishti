@@ -1,22 +1,26 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Map AOI Selection and Layers', () => {
-  test('selecting an AOI changes the map bounds and URL parameter', async ({ page }) => {
-    // 1. Visit map page
+test.describe('Map AOI Selection, National Layer and Toggles', () => {
+  test('initial load with no AOI fits India envelope and displays National tree cover reference layer', async ({ page }) => {
     await page.goto('/map');
 
-    // 2. Ensure map container and controls are visible
+    // 1. Ensure map container is visible
     const mapContainer = page.locator('#maplibre-container');
     await expect(mapContainer).toBeVisible();
 
-    // 3. Tree Cover Density is active by default
-    const densityCheckbox = page.locator('input[type="checkbox"]').first();
-    await expect(densityCheckbox).toBeChecked();
+    // 2. National tree cover is ON by default
+    const nationalCheckbox = page.getByRole('checkbox', { name: /National tree cover/i });
+    await expect(nationalCheckbox).toBeChecked();
 
-    const densityLegend = page.getByText(/Tree cover density \(~100 m window\)/i);
-    await expect(densityLegend).toBeVisible();
+    // 3. Legend shows National tree cover reference ramp & Reference product chip
+    const legend = page.getByText(/National tree cover \(reference, ~30 m\)/i);
+    await expect(legend).toBeVisible();
+    await expect(page.getByText(/Reference product/i)).toBeVisible();
+  });
 
-    // 4. Select a different AOI from dropdown
+  test('selecting an AOI changes the map bounds and URL parameter', async ({ page }) => {
+    await page.goto('/map');
+
     const aoiSelect = page.locator('select').first();
     await expect(aoiSelect).toBeVisible();
 
@@ -26,7 +30,7 @@ test.describe('Map AOI Selection and Layers', () => {
     // Verify URL parameter updated to selected AOI
     await expect(page).toHaveURL(/aoi=western-ghats-shimoga/);
 
-    // Verify that selecting another AOI changes URL and triggers fitBounds
+    // Verify selecting another AOI changes URL
     await aoiSelect.selectOption({ value: 'rondonia-jamari' });
     await expect(page).toHaveURL(/aoi=rondonia-jamari/);
   });
@@ -36,9 +40,23 @@ test.describe('Map AOI Selection and Layers', () => {
 
     const aoiSelect = page.locator('select').first();
     await expect(aoiSelect).toHaveValue('kalimantan-kahayan');
+  });
 
-    // Legend shows active observation date and tree density ramp
-    const densityLegend = page.getByText(/Tree cover density \(~100 m window\)/i);
-    await expect(densityLegend).toBeVisible();
+  test('toggling layers and adjusting opacity controls work smoothly', async ({ page }) => {
+    await page.goto('/map?aoi=western-ghats-shimoga');
+
+    // Open opacity sliders
+    const opacityButton = page.getByRole('button', { name: /Opacity/i });
+    await opacityButton.click();
+
+    // Check Suspected Forest Loss is checked by default
+    const lossCheckbox = page.getByRole('checkbox', { name: /Suspected Forest Loss/i });
+    await expect(lossCheckbox).toBeChecked();
+
+    // Uncheck and recheck
+    await lossCheckbox.uncheck();
+    await expect(lossCheckbox).not.toBeChecked();
+    await lossCheckbox.check();
+    await expect(lossCheckbox).toBeChecked();
   });
 });

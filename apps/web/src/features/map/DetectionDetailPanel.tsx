@@ -42,7 +42,7 @@ export const DetectionDetailPanel: React.FC<DetectionDetailProps> = ({ detection
         dateT0: detection.dateT0,
         dateT1: detection.dateT1,
         explanation: detection.explanation,
-        attribution: 'ForestWatch AI — Contains modified Copernicus Sentinel data [2020-2024]',
+        attribution: 'VanDrishti — Contains modified Copernicus Sentinel data [2020-2024]',
       },
     };
 

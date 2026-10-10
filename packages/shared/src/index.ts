@@ -112,6 +112,17 @@ export const DensitySampleResultSchema = z.object({
 });
 export type DensitySampleResult = z.infer<typeof DensitySampleResultSchema>;
 
+export const TreeCoverSampleResultSchema = z.object({
+  lat: z.number(),
+  lon: z.number(),
+  treeCoverSharePercent: z.number().nullable(),
+  isCovered: z.boolean(),
+  source: z.string(),
+  year: z.string(),
+  reason: z.string().optional(),
+});
+export type TreeCoverSampleResult = z.infer<typeof TreeCoverSampleResultSchema>;
+
 export const ModelVersionSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),

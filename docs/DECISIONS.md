@@ -1,6 +1,6 @@
-# Architectural Decisions Record — ForestWatch AI
+# Architectural Decisions Record — VanDrishti (वन दृष्टि)
 
-This document records architectural, algorithmic, geospatial, and infrastructure decisions made for ForestWatch AI, including verifications of external APIs, data licenses, quotas, and library versions.
+This document records architectural, algorithmic, geospatial, and infrastructure decisions made for VanDrishti, including verifications of external APIs, data licenses, quotas, and library versions.
 
 ---
 
@@ -80,3 +80,13 @@ No unverified or fabricated accuracy metrics are ever displayed.
 - **Typography:** Self-hosted `Source Serif 4` (editorial headings), `IBM Plex Sans` (UI text), `IBM Plex Mono` (tabular numbers and coordinates).
 - **Cartographic Encoding:** Color-blind safe representation. Forest loss polygons feature distinct stroke weight (2px dark red outline) and diagonal hatch fill, never relying on red vs green color distinction alone.
 - **Language Discipline:** "Suspected forest loss", "detected change", "possible vegetation loss". Never "proven deforestation" or "illegal logging".
+
+---
+
+## 6. National Reference Tree Cover Layer (All of India)
+
+- **Static Reference Pre-computation:** Subcontinental coverage (~3.3M km²) is decoupled from request-time worker computation. Pre-aggregated to a ~30 m grid (from 10 m ESA WorldCover classes 10 & 95) holding uint8 percentage density (0–100%).
+- **Boundary Policy & Legal Cartography:** The layer strictly adheres to the geographic bounding box envelope [68.0–98.0° E, 6.0–38.0° N]. Data is never clipped to national boundary polygons; political border depiction is strictly delegated to the neutral vector basemap provider in compliance with Indian geospatial regulations.
+- **Delivery:** Hosted as a single PMTiles archive on Cloudflare R2 / S3-compatible storage with HTTP Range request support and CORS enabled.
+- **Sampling API:** Rate-limited `GET /api/v1/tree-cover/sample?lat=&lon=` reads the stored COG or envelope grid, returning exact tree-cover percentage and source metadata.
+

@@ -7,7 +7,8 @@ import type {
   DatasetSource, 
   GeocodeResult, 
   TimeseriesPoint,
-  DensitySampleResult
+  DensitySampleResult,
+  TreeCoverSampleResult
 } from '@forestwatch/shared';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -132,4 +133,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }),
+
+  sampleNationalTreeCover: (lat: number, lon: number) =>
+    fetchJson<TreeCoverSampleResult>(`${API_BASE}/tree-cover/sample?lat=${lat}&lon=${lon}`),
 };

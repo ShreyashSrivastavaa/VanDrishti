@@ -31,9 +31,9 @@ describe('Web UI Components', () => {
     );
 
     expect(screen.getByText(/Suspected Forest Loss/i)).toBeDefined();
-    expect(screen.getByText(/Forest Cover \(Baseline Reference\)/i)).toBeDefined();
+    expect(screen.getByText(/Forest Cover Mask/i)).toBeDefined();
     expect(screen.getByText(/Sentinel-2 True Color/i)).toBeDefined();
-    expect(screen.getByText(/color-blind safety/i)).toBeDefined();
+    expect(screen.getByText(/Vegetation change is not proof of deforestation/i)).toBeDefined();
   });
 
   it('MapLegend renders Tree Cover Density gradient, scale stops, and model status caveat', () => {
@@ -57,6 +57,22 @@ describe('Web UI Components', () => {
     expect(screen.getByText(/^75%$/)).toBeDefined();
     expect(screen.getByText(/^100%$/)).toBeDefined();
     expect(screen.getByText(/Share of pixels classified as forest by spectral_baseline, baseline\. Not a tree count\. Source: Sentinel-2 2023-08-18\./i)).toBeDefined();
+  });
+
+  it('MapLegend renders National tree cover reference ramp and Reference product chip', () => {
+    render(
+      <MapLegend
+        showNationalTreeCover={true}
+        showSatellite={false}
+        showForestMask={false}
+        showLoss={false}
+        showAoiBoundaries={true}
+      />
+    );
+
+    expect(screen.getByText(/National tree cover \(reference, ~30 m\)/i)).toBeDefined();
+    expect(screen.getByText(/Reference product/i)).toBeDefined();
+    expect(screen.getByText(/ESA WorldCover 2021/i)).toBeDefined();
   });
 
   it('DetectionDetailPanel renders coordinates, area, dates, and explanation', () => {
@@ -87,7 +103,8 @@ describe('Web UI Components', () => {
 
   it('Header renders geometric mark and navigation links', () => {
     renderWithProviders(<Header />);
-    expect(screen.getByText(/ForestWatch/i)).toBeDefined();
+    expect(screen.getByText(/VanDrishti/i)).toBeDefined();
+    expect(screen.getByText(/वन दृष्टि/i)).toBeDefined();
     expect(screen.getByRole('link', { name: /^Map$/i })).toBeDefined();
     expect(screen.getByText(/Regions/i)).toBeDefined();
     expect(screen.getByText(/Methodology/i)).toBeDefined();

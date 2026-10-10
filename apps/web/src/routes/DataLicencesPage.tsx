@@ -19,7 +19,7 @@ export const DataLicencesPage: React.FC = () => {
           Data Sources, Licenses & Citations
         </h1>
         <p className="text-sm text-ink-muted leading-relaxed">
-          ForestWatch AI operates strictly with open-access satellite data, open-source cartography, and publicly licensed baseline references.
+          VanDrishti operates strictly with open-access satellite data, open-source cartography, and publicly licensed baseline references.
         </p>
       </header>
 

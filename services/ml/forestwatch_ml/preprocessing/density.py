@@ -132,3 +132,45 @@ def export_density_raw(density: np.ndarray) -> bytes:
     h, w = density.shape
     header = struct.pack(">II", w, h)
     return header + density.tobytes()
+
+def aggregate_worldcover_to_density(raw_10m: np.ndarray) -> np.ndarray:
+    """
+    Aggregates 10 m ESA WorldCover classification data (3x3 blocks) into a ~30 m grid
+    holding tree-cover percentage (0-100) as uint8.
+    
+    Classes counted as trees:
+    - 10: Tree cover
+    - 95: Mangroves
+    
+    Water, nodata (0 or 255) and outside-data pixels are excluded from the denominator.
+    If a 3x3 window contains NO valid pixels, the cell is assigned 255 (nodata / transparent),
+    never 0.
+    """
+    h, w = raw_10m.shape
+    new_h = h // 3
+    new_w = w // 3
+    
+    if new_h == 0 or new_w == 0:
+        return np.empty((0, 0), dtype=np.uint8)
+
+    cropped = raw_10m[:new_h * 3, :new_w * 3]
+    is_tree = (cropped == 10) | (cropped == 95)
+    is_valid = (cropped != 0) & (cropped != 255)
+
+    reshaped_tree = is_tree.reshape(new_h, 3, new_w, 3)
+    tree_count = reshaped_tree.sum(axis=(1, 3))
+
+    reshaped_valid = is_valid.reshape(new_h, 3, new_w, 3)
+    valid_count = reshaped_valid.sum(axis=(1, 3))
+
+    density = np.full((new_h, new_w), 255, dtype=np.uint8)
+    has_valid = valid_count > 0
+
+    density[has_valid] = np.clip(
+        np.round((tree_count[has_valid] / valid_count[has_valid]) * 100.0),
+        0,
+        100
+    ).astype(np.uint8)
+
+    return density
+

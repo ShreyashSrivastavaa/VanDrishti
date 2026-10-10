@@ -28,7 +28,7 @@ export const AboutPage: React.FC = () => {
           Our Mission
         </h2>
         <p>
-          Deforestation monitoring often remains siloed behind proprietary enterprise dashboards or complex Earth Engine codebases that require specialized engineering. ForestWatch AI bridges this gap by providing an open, free, and verifiable platform where anyone can examine multi-spectral satellite imagery and trace suspected canopy clearings.
+          Deforestation monitoring often remains siloed behind proprietary enterprise dashboards or complex Earth Engine codebases that require specialized engineering. VanDrishti (वन दृष्टि) bridges this gap by providing an open, free, and verifiable platform where anyone can examine multi-spectral satellite imagery and trace suspected canopy clearings.
         </p>
         <p>
           We operate under strict data integrity principles. We never simulate detections, inflate statistical accuracy, or label ambiguous vegetation shifts as proven crimes. Every number presented originates from traceable satellite passes and auditable algorithms.
@@ -41,7 +41,7 @@ export const AboutPage: React.FC = () => {
           <span>Independent & Free for Everyone</span>
         </div>
         <p className="text-xs text-ink-muted leading-relaxed">
-          ForestWatch AI is free and independent. Contributions are voluntary and cover hosting costs. There are no premium accounts, feature paywalls, or gated datasets.
+          VanDrishti is free and independent. Contributions are voluntary and cover hosting costs. There are no premium accounts, feature paywalls, or gated datasets.
         </p>
         {config?.supportUrl && (
           <div className="pt-2">

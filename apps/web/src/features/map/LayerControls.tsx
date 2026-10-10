@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AoiSummary, Observation } from '@forestwatch/shared';
-import { Search, Layers, Calendar, Sliders, ChevronDown, ChevronUp, MapPin, Eye, EyeOff } from 'lucide-react';
+import { Search, Layers, Calendar, Sliders, ChevronDown, ChevronUp, MapPin, Globe, Sparkles } from 'lucide-react';
 
 interface LayerControlsProps {
   aois: AoiSummary[];
@@ -11,6 +11,10 @@ interface LayerControlsProps {
   selectedObsT1: Observation | null;
   onSelectObsT0: (obs: Observation) => void;
   onSelectObsT1: (obs: Observation) => void;
+  showNationalTreeCover: boolean;
+  onToggleNationalTreeCover: () => void;
+  nationalTreeCoverOpacity: number;
+  onChangeNationalTreeCoverOpacity: (val: number) => void;
   showDensity: boolean;
   onToggleDensity: () => void;
   densityOpacity: number;
@@ -42,6 +46,10 @@ export const LayerControls: React.FC<LayerControlsProps> = ({
   selectedObsT1,
   onSelectObsT0,
   onSelectObsT1,
+  showNationalTreeCover,
+  onToggleNationalTreeCover,
+  nationalTreeCoverOpacity,
+  onChangeNationalTreeCoverOpacity,
   showDensity,
   onToggleDensity,
   densityOpacity,
@@ -193,7 +201,7 @@ export const LayerControls: React.FC<LayerControlsProps> = ({
         </div>
       )}
 
-      {/* 3. Layer Toggles & Opacity */}
+      {/* 3. Layer Controls — Grouped by Two-Tier Data Architecture */}
       <div className="p-3.5 border-b border-rule space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-[10px] uppercase font-mono tracking-wider text-ink-muted font-semibold flex items-center gap-1.5">
@@ -209,152 +217,210 @@ export const LayerControls: React.FC<LayerControlsProps> = ({
           </button>
         </div>
 
-        <div className="space-y-2">
-          {/* Tree Cover Density */}
+        {/* TIER 1: National Reference Layer */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center gap-1 text-[10px] uppercase font-mono tracking-wider text-forest-900 font-bold">
+            <Globe className="w-3 h-3 text-olive-600" />
+            <span>National Reference</span>
+          </div>
+
           <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={showDensity}
-                  onChange={onToggleDensity}
+                  checked={showNationalTreeCover}
+                  onChange={onToggleNationalTreeCover}
                   className="rounded text-forest-900 accent-forest-900"
                 />
-                <span className="font-medium text-ink">Tree cover density</span>
+                <span className="font-medium text-ink">National tree cover</span>
               </label>
-              <div 
-                className="w-4 h-3 rounded-[1px] border border-rule shadow-xs shrink-0" 
-                style={{
-                  background: 'linear-gradient(to right, #DDE5B8, #7FA65A, #0F3A22)',
-                }}
-                title="Continuous tree cover density ramp"
-              />
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-[9px] bg-olive-200/70 text-forest-900 px-1 py-0.2 rounded text-center">
+                  Reference
+                </span>
+                <div 
+                  className="w-3.5 h-3 rounded-[1px] border border-rule shadow-xs shrink-0" 
+                  style={{
+                    background: 'linear-gradient(to right, #DDE5B8, #7FA65A, #0F3A22)',
+                  }}
+                  title="ESA WorldCover reference tree cover"
+                />
+              </div>
             </div>
-            {showOpacityControls && showDensity && (
+            {showOpacityControls && showNationalTreeCover && (
               <div className="pt-1 flex items-center gap-2">
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.05"
-                  value={densityOpacity}
-                  onChange={(e) => onChangeDensityOpacity(parseFloat(e.target.value))}
+                  value={nationalTreeCoverOpacity}
+                  onChange={(e) => onChangeNationalTreeCoverOpacity(parseFloat(e.target.value))}
                   className="w-full accent-forest-900 h-1 bg-rule rounded cursor-pointer"
                 />
                 <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
-                  {Math.round(densityOpacity * 100)}%
+                  {Math.round(nationalTreeCoverOpacity * 100)}%
                 </span>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Suspected Loss */}
-          <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
-            <div className="flex items-center justify-between">
+        {/* TIER 2: VanDrishti Analysis Layers */}
+        <div className="space-y-1.5 pt-2 border-t border-rule/60">
+          <div className="flex items-center gap-1 text-[10px] uppercase font-mono tracking-wider text-forest-900 font-bold">
+            <Sparkles className="w-3 h-3 text-forest-700" />
+            <span>VanDrishti Analysis</span>
+          </div>
+
+          <div className="space-y-2">
+            {/* Tree Cover Density (AOI) */}
+            <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showDensity}
+                    onChange={onToggleDensity}
+                    className="rounded text-forest-900 accent-forest-900"
+                  />
+                  <span className="font-medium text-ink">Tree cover density (AOI)</span>
+                </label>
+                <div 
+                  className="w-4 h-3 rounded-[1px] border border-rule shadow-xs shrink-0" 
+                  style={{
+                    background: 'linear-gradient(to right, #DDE5B8, #7FA65A, #0F3A22)',
+                  }}
+                  title="Sentinel-2 11x11 focal density ramp"
+                />
+              </div>
+              {showOpacityControls && showDensity && (
+                <div className="pt-1 flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={densityOpacity}
+                    onChange={(e) => onChangeDensityOpacity(parseFloat(e.target.value))}
+                    className="w-full accent-forest-900 h-1 bg-rule rounded cursor-pointer"
+                  />
+                  <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
+                    {Math.round(densityOpacity * 100)}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Suspected Loss */}
+            <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showLoss}
+                    onChange={onToggleLoss}
+                    className="rounded text-forest-900 accent-forest-900"
+                  />
+                  <span className="font-medium text-ink">Suspected Forest Loss</span>
+                </label>
+                <div className="w-3.5 h-3 border-2 border-[#8A2818] hatch-pattern rounded-[1px]" />
+              </div>
+              {showOpacityControls && showLoss && (
+                <div className="pt-1 flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={lossOpacity}
+                    onChange={(e) => onChangeLossOpacity(parseFloat(e.target.value))}
+                    className="w-full accent-forest-900 h-1 bg-rule rounded"
+                  />
+                  <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
+                    {Math.round(lossOpacity * 100)}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Forest Mask */}
+            <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showForestMask}
+                    onChange={onToggleForestMask}
+                    className="rounded text-forest-900 accent-forest-900"
+                  />
+                  <span className="text-ink">Forest Cover (Baseline)</span>
+                </label>
+                <div className="w-3.5 h-3 bg-olive-600/50 border border-olive-600 rounded-[1px]" />
+              </div>
+              {showOpacityControls && showForestMask && (
+                <div className="pt-1 flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={forestMaskOpacity}
+                    onChange={(e) => onChangeForestMaskOpacity(parseFloat(e.target.value))}
+                    className="w-full accent-forest-900 h-1 bg-rule rounded"
+                  />
+                  <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
+                    {Math.round(forestMaskOpacity * 100)}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Satellite Imagery */}
+            <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showSatellite}
+                    onChange={onToggleSatellite}
+                    className="rounded text-forest-900 accent-forest-900"
+                  />
+                  <span className="text-ink">Sentinel-2 True Color</span>
+                </label>
+                <span className="font-mono text-[9px] text-ink-muted uppercase">RGB</span>
+              </div>
+              {showOpacityControls && showSatellite && (
+                <div className="pt-1 flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={satelliteOpacity}
+                    onChange={(e) => onChangeSatelliteOpacity(parseFloat(e.target.value))}
+                    className="w-full accent-forest-900 h-1 bg-rule rounded"
+                  />
+                  <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
+                    {Math.round(satelliteOpacity * 100)}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* AOI Boundaries */}
+            <div className="flex items-center justify-between p-2 bg-paper border border-rule rounded">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={showLoss}
-                  onChange={onToggleLoss}
+                  checked={showAoiBoundaries}
+                  onChange={onToggleAoiBoundaries}
                   className="rounded text-forest-900 accent-forest-900"
                 />
-                <span className="font-medium text-ink">Suspected Forest Loss</span>
+                <span className="text-ink">AOI Boundary Outlines</span>
               </label>
-              <div className="w-3.5 h-3 border border-loss-600 hatch-pattern rounded-[1px]" />
             </div>
-            {showOpacityControls && showLoss && (
-              <div className="pt-1 flex items-center gap-2">
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={lossOpacity}
-                  onChange={(e) => onChangeLossOpacity(parseFloat(e.target.value))}
-                  className="w-full accent-forest-900 h-1 bg-rule rounded"
-                />
-                <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
-                  {Math.round(lossOpacity * 100)}%
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Forest Mask */}
-          <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showForestMask}
-                  onChange={onToggleForestMask}
-                  className="rounded text-forest-900 accent-forest-900"
-                />
-                <span className="text-ink">Forest Cover (Baseline)</span>
-              </label>
-              <div className="w-3.5 h-3 bg-olive-600/50 border border-olive-600 rounded-[1px]" />
-            </div>
-            {showOpacityControls && showForestMask && (
-              <div className="pt-1 flex items-center gap-2">
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={forestMaskOpacity}
-                  onChange={(e) => onChangeForestMaskOpacity(parseFloat(e.target.value))}
-                  className="w-full accent-forest-900 h-1 bg-rule rounded"
-                />
-                <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
-                  {Math.round(forestMaskOpacity * 100)}%
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Satellite Imagery */}
-          <div className="flex flex-col gap-1 p-2 bg-paper border border-rule rounded">
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showSatellite}
-                  onChange={onToggleSatellite}
-                  className="rounded text-forest-900 accent-forest-900"
-                />
-                <span className="text-ink">Sentinel-2 True Color</span>
-              </label>
-              <span className="font-mono text-[9px] text-ink-muted uppercase">RGB</span>
-            </div>
-            {showOpacityControls && showSatellite && (
-              <div className="pt-1 flex items-center gap-2">
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={satelliteOpacity}
-                  onChange={(e) => onChangeSatelliteOpacity(parseFloat(e.target.value))}
-                  className="w-full accent-forest-900 h-1 bg-rule rounded"
-                />
-                <span className="font-mono text-[10px] text-ink-muted w-8 text-right">
-                  {Math.round(satelliteOpacity * 100)}%
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* AOI Boundaries */}
-          <div className="flex items-center justify-between p-2 bg-paper border border-rule rounded">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showAoiBoundaries}
-                onChange={onToggleAoiBoundaries}
-                className="rounded text-forest-900 accent-forest-900"
-              />
-              <span className="text-ink">AOI Boundary Outlines</span>
-            </label>
           </div>
         </div>
       </div>

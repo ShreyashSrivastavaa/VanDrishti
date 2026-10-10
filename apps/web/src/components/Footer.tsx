@@ -22,7 +22,7 @@ export const Footer: React.FC = () => {
               Observational Transparency & Language Discipline
             </p>
             <p className="leading-relaxed">
-              All events identified by ForestWatch AI are classified as <strong className="text-ink">suspected forest loss</strong> or <strong className="text-ink">detected spectral change</strong>. Surface reflectance changes may be caused by seasonal phenology, agricultural harvest cycles, fire scars, or cloud shadow artifacts. Satellite observations do not constitute definitive legal proof of deforestation without local validation.
+              All events identified by VanDrishti are classified as <strong className="text-ink">suspected forest loss</strong> or <strong className="text-ink">detected spectral change</strong>. Surface reflectance changes may be caused by seasonal phenology, agricultural harvest cycles, fire scars, or cloud shadow artifacts. Satellite observations do not constitute definitive legal proof of deforestation without local validation.
             </p>
           </div>
         </div>
@@ -30,7 +30,7 @@ export const Footer: React.FC = () => {
         {/* Links & Attributions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2 border-t border-rule/60">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <span>© {new Date().getFullYear()} ForestWatch AI — Free & Open Environmental Tool</span>
+            <span>© {new Date().getFullYear()} VanDrishti (वन दृष्टि) — Free & Open Environmental Tool</span>
             <Link to="/methodology" className="hover:text-forest-700 underline underline-offset-2">
               Scientific Methodology
             </Link>

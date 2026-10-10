@@ -14,6 +14,7 @@ import analysesRouter from './routes/analyses.js';
 import detectionsRouter from './routes/detections.js';
 import sourcesRouter from './routes/sources.js';
 import jobsRouter from './routes/jobs.js';
+import treeCoverRouter from './routes/treeCover.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export const app = express();
@@ -93,6 +94,7 @@ v1.use('/', analysesRouter);
 v1.use('/detections', detectionsRouter);
 v1.use('/dataset_sources', sourcesRouter);
 v1.use('/jobs', jobsRouter);
+v1.use('/tree-cover', treeCoverRouter);
 
 app.use('/api/v1', v1);
 

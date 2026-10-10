@@ -49,14 +49,8 @@ router.get('/aois/:slug/observations', async (req: Request, res: Response, next)
         fm.forest_area_ha AS "forestAreaHa",
         fm.forest_fraction AS "forestFraction",
         fm.overlay_uri AS "forestOverlayUri",
-        COALESCE(
-          fm.density_overlay_uri,
-          CASE WHEN fm.overlay_uri IS NOT NULL THEN REPLACE(fm.overlay_uri, 'forest_mask.png', 'density_overlay.png') ELSE NULL END
-        ) AS "densityOverlayUri",
-        COALESCE(
-          fm.density_cog_uri,
-          CASE WHEN fm.overlay_uri IS NOT NULL THEN REPLACE(fm.overlay_uri, 'forest_mask.png', 'density.tif') ELSE NULL END
-        ) AS "densityCogUri",
+        CASE WHEN fm.overlay_uri IS NOT NULL THEN REPLACE(fm.overlay_uri, 'forest_mask.png', 'density_overlay.png') ELSE NULL END AS "densityOverlayUri",
+        CASE WHEN fm.overlay_uri IS NOT NULL THEN REPLACE(fm.overlay_uri, 'forest_mask.png', 'density.tif') ELSE NULL END AS "densityCogUri",
         mv.name AS "modelName",
         mv.status AS "modelStatus"
       FROM observations o

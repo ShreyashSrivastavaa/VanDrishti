@@ -2,6 +2,8 @@ import React from 'react';
 import { Info } from 'lucide-react';
 
 interface MapLegendProps {
+  showNationalTreeCover?: boolean;
+  nationalTreeCoverOpacity?: number;
   showDensity?: boolean;
   densityOpacity?: number;
   showSatellite: boolean;
@@ -14,6 +16,7 @@ interface MapLegendProps {
 }
 
 export const MapLegend: React.FC<MapLegendProps> = ({
+  showNationalTreeCover = false,
   showDensity = false,
   showSatellite,
   showForestMask,
@@ -37,13 +40,46 @@ export const MapLegend: React.FC<MapLegendProps> = ({
       </div>
 
       <div className="space-y-2.5">
-        {/* 1. Tree Cover Density Ramp */}
-        {showDensity && (
+        {/* 1. National Reference Tree Cover Ramp */}
+        {showNationalTreeCover && (
+          <div className="space-y-1.5 p-2 bg-paper/60 border border-rule/70 rounded">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-ink">National tree cover (reference, ~30 m)</span>
+              <span className="font-mono text-[9px] text-forest-700 bg-olive-200/60 px-1.5 py-0.5 rounded font-semibold">
+                Reference product
+              </span>
+            </div>
+
+            {/* Continuous gradient ramp matching specified stops */}
+            <div className="space-y-1">
+              <div 
+                className="w-full h-3 rounded-[2px] border border-rule shadow-inner"
+                style={{
+                  background: 'linear-gradient(to right, rgba(221,229,184,0) 0%, rgba(221,229,184,0) 10%, #DDE5B8 10%, #B5CC84 25%, #7FA65A 45%, #3F7D43 65%, #1F5A32 80%, #0F3A22 100%)',
+                }}
+              />
+              <div className="flex justify-between font-mono text-[9px] text-ink-muted px-0.5">
+                <span>0%</span>
+                <span>25%</span>
+                <span>50%</span>
+                <span>75%</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-ink-muted leading-tight pt-0.5">
+              Share of pixels classified as tree cover by ESA WorldCover 2021. Not a tree count and not a measure of natural forest. Source: 2021.
+            </p>
+          </div>
+        )}
+
+        {/* 2. AOI Tree Cover Density Ramp */}
+        {showDensity && !showNationalTreeCover && (
           <div className="space-y-1.5 p-2 bg-paper/60 border border-rule/70 rounded">
             <div className="flex items-center justify-between">
               <span className="font-medium text-ink">Tree cover density (~100 m window)</span>
               <span className="font-mono text-[9px] text-forest-700 bg-forest-900/10 px-1.5 py-0.5 rounded">
-                10m L2A
+                {modelStatus || 'baseline'}
               </span>
             </div>
 
@@ -70,13 +106,13 @@ export const MapLegend: React.FC<MapLegendProps> = ({
           </div>
         )}
 
-        {/* 2. Suspected Forest Loss (Outline + Hatch) */}
+        {/* 3. Suspected Forest Loss (Outline + Hatch) */}
         {showLoss && (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div 
                 className="w-4 h-3.5 border-2 border-[#8A2818] hatch-pattern rounded-[1px] shrink-0" 
-                title="Hatch pattern with 2px stroke"
+                title="Hatch pattern with 2px dark red-orange stroke"
               />
               <span className="font-medium text-ink">Suspected Forest Loss</span>
             </div>
@@ -94,36 +130,35 @@ export const MapLegend: React.FC<MapLegendProps> = ({
           </div>
         )}
 
-        {/* 3. Forest Cover (Baseline Reference) */}
+        {/* 4. Forest Cover (Baseline Reference) */}
         {showForestMask && (
           <div className="flex items-center gap-2">
             <div className="w-4 h-3.5 bg-olive-600/50 border border-olive-600 rounded-[1px] shrink-0" />
-            <span className="text-ink">Forest Cover (Baseline Reference)</span>
+            <span className="text-ink">Forest Cover Mask (Binary)</span>
           </div>
         )}
 
-        {/* 4. Satellite Imagery */}
+        {/* 5. Sentinel-2 True Color */}
         {showSatellite && (
           <div className="flex items-center gap-2">
-            <div className="w-4 h-3.5 bg-paper border border-ink-muted rounded-[1px] shrink-0 flex items-center justify-center font-mono text-[8px] text-ink-muted">
+            <div className="w-4 h-3.5 bg-ink/20 border border-ink/40 rounded-[1px] shrink-0 flex items-center justify-center font-mono text-[8px] text-ink">
               RGB
             </div>
-            <span className="text-ink">Sentinel-2 True Color (L2A BOA)</span>
+            <span className="text-ink">Sentinel-2 True Color (L2A)</span>
           </div>
         )}
 
-        {/* 5. AOI Boundary Outlines */}
+        {/* 6. AOI Boundaries */}
         {showAoiBoundaries && (
           <div className="flex items-center gap-2">
-            <div className="w-4 h-1 border-t-2 border-dashed border-forest-900 shrink-0" />
-            <span className="text-ink">Monitoring Area Bounding Box</span>
+            <div className="w-4 h-0.5 border-t border-dashed border-forest-900 shrink-0" />
+            <span className="text-ink">Curated Region Boundaries</span>
           </div>
         )}
       </div>
 
-      <div className="pt-1.5 border-t border-rule/60 flex items-start gap-1.5 text-[10px] text-ink-muted">
-        <Info className="w-3 h-3 text-forest-700 shrink-0 mt-0.5" />
-        <span>Loss polygons feature 2px dark-red stroke and hatch fill for color-blind safety.</span>
+      <div className="pt-2 border-t border-rule/60 text-[9px] text-ink-muted leading-tight">
+        Vegetation change is not proof of deforestation. Detections require independent verification.
       </div>
     </div>
   );

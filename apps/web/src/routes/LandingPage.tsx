@@ -30,7 +30,7 @@ export const LandingPage: React.FC = () => {
             </h1>
 
             <p className="text-ink-muted text-base sm:text-lg leading-relaxed max-w-2xl">
-              ForestWatch AI applies multi-spectral remote sensing and machine learning to Copernicus Sentinel-2 observations. We make environmental canopy change transparent, reproducible, and accessible to researchers, civil society, and the public.
+              VanDrishti (वन दृष्टि) applies multi-spectral remote sensing and machine learning to explore tree cover across India and monitor suspected forest loss in curated regions from Copernicus Sentinel-2 observations. We make environmental canopy change transparent, reproducible, and accessible to researchers, civil society, and the public.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">

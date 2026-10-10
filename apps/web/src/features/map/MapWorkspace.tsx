@@ -1,13 +1,29 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import maplibregl from 'maplibre-gl';
+import * as pmtiles from 'pmtiles';
 import { useQuery } from '@tanstack/react-query';
 import { api, resolveArtifactUrl } from '../../lib/api';
-import { AoiSummary, Observation, DensitySampleResult } from '@forestwatch/shared';
+import { AoiSummary, Observation, DensitySampleResult, TreeCoverSampleResult } from '@forestwatch/shared';
 import { LayerControls } from './LayerControls';
 import { MapLegend } from './MapLegend';
 import { DetectionDetailPanel } from './DetectionDetailPanel';
-import { AlertCircle, Trees, X, Crosshair } from 'lucide-react';
+import { AlertCircle, Trees, X, Globe } from 'lucide-react';
+
+// Register PMTiles protocol globally once
+let protocolRegistered = false;
+if (typeof window !== 'undefined' && !protocolRegistered) {
+  try {
+    const protocol = new pmtiles.Protocol();
+    maplibregl.addProtocol('pmtiles', protocol.tile);
+    protocolRegistered = true;
+  } catch {
+    // Protocol already added or running in test
+  }
+}
+
+// India geographic bounding box envelope: [min_lon, min_lat, max_lon, max_lat]
+const INDIA_BBOX: [number, number, number, number] = [68.0, 6.5, 97.5, 37.5];
 
 // Fallback curated regions in case API connection is offline
 const FALLBACK_AOIS: AoiSummary[] = [
@@ -158,6 +174,49 @@ function createHatchImage(): ImageData {
   return ctx.getImageData(0, 0, size, size);
 }
 
+// Find first label symbol layer in the basemap style so raster layers sit underneath
+function findFirstLabelLayerId(map: maplibregl.Map): string | undefined {
+  const layers = map.getStyle()?.layers;
+  if (!layers) return undefined;
+  for (const layer of layers) {
+    if (layer.type === 'symbol' && (
+      layer.id.includes('label') ||
+      layer.id.includes('place') ||
+      layer.id.includes('road_label') ||
+      layer.id.includes('poi') ||
+      layer.id.includes('admin')
+    )) {
+      return layer.id;
+    }
+  }
+  for (const layer of layers) {
+    if (layer.type === 'symbol') {
+      return layer.id;
+    }
+  }
+  return undefined;
+}
+
+// Procedural national tree cover density canvas overlay for standalone preview
+function createNationalTreeCoverDataUrl(): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+
+  // Subtle gradient mimicking Western Ghats and Himalayan tree-cover density
+  const grad = ctx.createLinearGradient(0, 128, 128, 0);
+  grad.addColorStop(0.1, 'rgba(15, 58, 34, 0.75)');   // Dark green (SW Ghats)
+  grad.addColorStop(0.4, 'rgba(127, 166, 90, 0.55)'); // Mid green (Central India)
+  grad.addColorStop(0.7, 'rgba(221, 229, 184, 0.35)');// Light green (Dry areas)
+  grad.addColorStop(0.9, 'rgba(31, 90, 50, 0.70)');   // Northeast / Foothills
+  
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+
+  return canvas.toDataURL();
+}
+
 export const MapWorkspace: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -175,10 +234,9 @@ export const MapWorkspace: React.FC = () => {
   });
 
   const aois = remoteAois.length > 0 ? remoteAois : (aoisError ? FALLBACK_AOIS : []);
-
   const [selectedAoi, setSelectedAoi] = useState<AoiSummary | null>(null);
 
-  // Sync AOI from URL or default to first
+  // Sync AOI from URL on load
   useEffect(() => {
     if (aois.length > 0) {
       if (aoiSlugFromUrl) {
@@ -187,9 +245,6 @@ export const MapWorkspace: React.FC = () => {
           setSelectedAoi(found);
           return;
         }
-      }
-      if (!selectedAoi) {
-        setSelectedAoi(aois[0]);
       }
     }
   }, [aois, aoiSlugFromUrl]);
@@ -244,13 +299,16 @@ export const MapWorkspace: React.FC = () => {
   // Selected Detection details
   const [selectedDetection, setSelectedDetection] = useState<any | null>(null);
 
-  // Layer Toggles & Opacity (per requirements)
-  // Default layers on first load:
-  // - Tree Cover Density: ON (70%)
+  // Layer Toggles & Opacities (Default layers on first load per specification):
+  // - National tree cover (reference): ON (75%)
+  // - Tree Cover Density (AOI): ON (70%)
   // - AOI outline: ON
   // - Suspected Forest Loss: ON (90%)
   // - Sentinel-2 True Colour: OFF (85%)
   // - Forest Cover (Baseline): OFF (45%)
+  const [showNationalTreeCover, setShowNationalTreeCover] = useState(true);
+  const [nationalTreeCoverOpacity, setNationalTreeCoverOpacity] = useState(0.75);
+
   const [showDensity, setShowDensity] = useState(true);
   const [densityOpacity, setDensityOpacity] = useState(0.70);
 
@@ -265,9 +323,17 @@ export const MapWorkspace: React.FC = () => {
 
   const [showAoiBoundaries, setShowAoiBoundaries] = useState(true);
 
-  // Density sampling readout state
-  const [sampledDensity, setSampledDensity] = useState<DensitySampleResult | null>(null);
-  const [isSampling, setIsSampling] = useState(false);
+  // Sampling readout state (both AOI observation & National reference layer)
+  const [sampledReadout, setSampledReadout] = useState<{
+    lat: number;
+    lon: number;
+    percent: number | null;
+    label: string;
+    source: string;
+    date?: string;
+    isNational?: boolean;
+  } | null>(null);
+
   const sampleTimeoutRef = useRef<any>(null);
 
   // Fit bounds helper respecting prefers-reduced-motion and ~48px padding
@@ -279,7 +345,7 @@ export const MapWorkspace: React.FC = () => {
     const prefersReducedMotion = typeof window !== 'undefined' && 
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const duration = immediate || prefersReducedMotion ? 0 : 1100;
+    const duration = immediate || prefersReducedMotion ? 0 : 1000;
 
     map.fitBounds(
       [[minLon, minLat], [maxLon, maxLat]],
@@ -297,15 +363,16 @@ export const MapWorkspace: React.FC = () => {
 
     const basemapStyle = import.meta.env.VITE_BASEMAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron';
 
+    // Initial center: if AOI in URL, center on AOI; else center on India
     const initialCenter: [number, number] = selectedAoi 
       ? [(selectedAoi.bbox[0] + selectedAoi.bbox[2]) / 2, (selectedAoi.bbox[1] + selectedAoi.bbox[3]) / 2]
-      : [-63.15, -9.51];
+      : [78.9629, 20.5937]; // India center
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: basemapStyle,
       center: initialCenter,
-      zoom: 10,
+      zoom: selectedAoi ? 10 : 4.5,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
@@ -319,7 +386,39 @@ export const MapWorkspace: React.FC = () => {
         map.addImage('loss-hatch', createHatchImage());
       }
 
-      // 1. AOI Outline Source & Layers
+      const firstLabelId = findFirstLabelLayerId(map);
+
+      // 1. National Reference Tree-Cover Layer (sits below text labels)
+      const pmtilesUrl = import.meta.env.VITE_TREECOVER_PMTILES_URL;
+      if (pmtilesUrl) {
+        map.addSource('national-treecover-source', {
+          type: 'raster',
+          url: `pmtiles://${pmtilesUrl}`,
+          tileSize: 256,
+        });
+      } else {
+        // Fallback procedural image covering India envelope
+        map.addSource('national-treecover-source', {
+          type: 'image',
+          url: createNationalTreeCoverDataUrl(),
+          coordinates: bboxToCoordinates(INDIA_BBOX),
+        });
+      }
+
+      map.addLayer({
+        id: 'national-treecover-layer',
+        type: 'raster',
+        source: 'national-treecover-source',
+        layout: {
+          visibility: showNationalTreeCover ? 'visible' : 'none',
+        },
+        paint: {
+          'raster-opacity': nationalTreeCoverOpacity,
+          'raster-fade-duration': 150,
+        },
+      }, firstLabelId);
+
+      // 2. AOI Outline Source & Layers
       map.addSource('aois', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
@@ -365,7 +464,7 @@ export const MapWorkspace: React.FC = () => {
         map.getCanvas().style.cursor = '';
       });
 
-      // 2. Suspected Forest Loss Detections Source & Layers (Drawn on TOP of all rasters)
+      // 3. Suspected Forest Loss Detections Source & Layers (Drawn on TOP of all rasters)
       map.addSource('detections', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
@@ -420,9 +519,15 @@ export const MapWorkspace: React.FC = () => {
 
       mapRef.current = map;
 
-      // Fit bounds immediately on load if an AOI is selected (e.g. ?aoi= in URL)
+      // Initial Camera Fitting:
       if (selectedAoi) {
         fitMapToAoi(selectedAoi, true);
+      } else {
+        // Fit all of India
+        map.fitBounds(
+          [[INDIA_BBOX[0], INDIA_BBOX[1]], [INDIA_BBOX[2], INDIA_BBOX[3]]],
+          { padding: 48, duration: 0 }
+        );
       }
     });
 
@@ -519,7 +624,6 @@ export const MapWorkspace: React.FC = () => {
         try {
           src.updateImage({ url: resolvedUrl, coordinates: coords });
         } catch {
-          // If updateImage fails, recreate
           if (hasLayer) map.removeLayer(layerId);
           map.removeSource(sourceId);
           createRasterLayer(map, sourceId, layerId, resolvedUrl, coords, opacity, visible, beforeLayerId);
@@ -571,12 +675,23 @@ export const MapWorkspace: React.FC = () => {
           'raster-fade-duration': 150,
         },
       }, before);
-    } catch (e) {
-      // Gracefully prevent unhandled console noise
+    } catch {
+      // Gracefully prevent unhandled console errors
     }
   }
 
-  // Synchronize all raster overlays when active observation or toggles change
+  // Synchronize National Reference Layer Visibility & Opacity
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    if (map.getLayer('national-treecover-layer')) {
+      map.setLayoutProperty('national-treecover-layer', 'visibility', showNationalTreeCover ? 'visible' : 'none');
+      map.setPaintProperty('national-treecover-layer', 'raster-opacity', nationalTreeCoverOpacity);
+    }
+  }, [showNationalTreeCover, nationalTreeCoverOpacity]);
+
+  // Synchronize AOI raster overlays when active observation or toggles change
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !selectedAoi) return;
@@ -621,7 +736,6 @@ export const MapWorkspace: React.FC = () => {
     );
 
     // Layer 3: Tree Cover Density (~100m window continuous ramp)
-    // If densityOverlayUri is not explicit, derive convention
     const densityUrl = activeObs?.densityOverlayUri || 
       (activeObs?.forestOverlayUri ? activeObs.forestOverlayUri.replace('forest_mask.png', 'density_overlay.png') : null);
 
@@ -651,6 +765,13 @@ export const MapWorkspace: React.FC = () => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
+    if (map.getLayer('aois-line')) {
+      map.setLayoutProperty('aois-line', 'visibility', showAoiBoundaries ? 'visible' : 'none');
+    }
+    if (map.getLayer('aois-fill')) {
+      map.setLayoutProperty('aois-fill', 'visibility', showAoiBoundaries ? 'visible' : 'none');
+    }
+
     if (map.getLayer('detections-fill')) {
       map.setLayoutProperty('detections-fill', 'visibility', showLoss ? 'visible' : 'none');
       map.setPaintProperty('detections-fill', 'fill-opacity', lossOpacity);
@@ -659,48 +780,72 @@ export const MapWorkspace: React.FC = () => {
       map.setLayoutProperty('detections-line', 'visibility', showLoss ? 'visible' : 'none');
       map.setPaintProperty('detections-line', 'line-opacity', lossOpacity);
     }
-    if (map.getLayer('aois-line')) {
-      map.setLayoutProperty('aois-line', 'visibility', showAoiBoundaries ? 'visible' : 'none');
-      map.setLayoutProperty('aois-fill', 'visibility', showAoiBoundaries ? 'visible' : 'none');
+  }, [showAoiBoundaries, showLoss, lossOpacity]);
+
+  // Interactive coordinate sampling handler (hover & click)
+  const handleMapSample = useCallback(async (lngLat: { lng: number; lat: number }) => {
+    const lat = lngLat.lat;
+    const lon = lngLat.lng;
+
+    // 1. If cursor is inside active AOI, sample Sentinel-2 focal density
+    if (selectedAoi && activeObs) {
+      const [minLon, minLat, maxLon, maxLat] = selectedAoi.bbox;
+      if (lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat) {
+        try {
+          const res = await api.sampleDensity(activeObs.id, lat, lon);
+          if (res) {
+            setSampledReadout({
+              lat: res.lat,
+              lon: res.lon,
+              percent: res.density,
+              label: res.isCloudOrNodata ? 'Cloud / Nodata' : `Tree cover density: ${res.density}%`,
+              source: `Sentinel-2 Focal Mean (~100 m window, ${res.modelStatus || 'baseline'})`,
+              date: res.acquiredAt || activeObs.acquiredAt,
+              isNational: false,
+            });
+            return;
+          }
+        } catch {
+          // fallback
+        }
+      }
     }
-  }, [showLoss, lossOpacity, showAoiBoundaries]);
 
-  // Hover / Tap sampling readout for Tree Cover Density
-  const handleMapSample = useCallback((lngLat: maplibregl.LngLat) => {
-    if (!showDensity || !activeObs?.id || !selectedAoi) return;
-
-    const [minLon, minLat, maxLon, maxLat] = selectedAoi.bbox;
-    if (lngLat.lng < minLon || lngLat.lng > maxLon || lngLat.lat < minLat || lngLat.lat > maxLat) {
-      return;
+    // 2. Otherwise, sample National Reference Tree Cover Layer
+    if (showNationalTreeCover) {
+      try {
+        const res = await api.sampleNationalTreeCover(lat, lon);
+        if (res && res.isCovered && res.treeCoverSharePercent !== null) {
+          setSampledReadout({
+            lat: res.lat,
+            lon: res.lon,
+            percent: res.treeCoverSharePercent,
+            label: `Tree cover share: ${res.treeCoverSharePercent}%`,
+            source: res.source,
+            date: res.year,
+            isNational: true,
+          });
+        }
+      } catch {
+        // silent
+      }
     }
-
-    setIsSampling(true);
-    api.sampleDensity(activeObs.id, lngLat.lat, lngLat.lng)
-      .then((res) => {
-        setSampledDensity(res);
-      })
-      .catch(() => {
-        // Fallback or silent catch
-      })
-      .finally(() => {
-        setIsSampling(false);
-      });
-  }, [showDensity, activeObs, selectedAoi]);
+  }, [selectedAoi, activeObs, showNationalTreeCover]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const onMouseMove = (e: maplibregl.MapMouseEvent) => {
-      if (!showDensity) return;
+      if (!showDensity && !showNationalTreeCover) return;
       if (sampleTimeoutRef.current) clearTimeout(sampleTimeoutRef.current);
       sampleTimeoutRef.current = setTimeout(() => {
         handleMapSample(e.lngLat);
-      }, 250);
+      }, 300);
     };
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
-      if (showDensity) {
+      if (showDensity || showNationalTreeCover) {
         handleMapSample(e.lngLat);
       }
     };
@@ -713,7 +858,7 @@ export const MapWorkspace: React.FC = () => {
       map.off('click', onClick);
       if (sampleTimeoutRef.current) clearTimeout(sampleTimeoutRef.current);
     };
-  }, [showDensity, handleMapSample]);
+  }, [showDensity, showNationalTreeCover, handleMapSample]);
 
   // Geocode fly-to handler
   const handleGeocodeSelect = (bbox: [number, number, number, number]) => {
@@ -723,7 +868,8 @@ export const MapWorkspace: React.FC = () => {
   };
 
   // Determine if active AOI has no forest cover data yet
-  const hasNoForestData = !obsLoading && (observations.length === 0 || (!activeObs?.forestOverlayUri && !activeObs?.densityOverlayUri));
+  // NOTICE RULE: Must NOT appear while the national layer is visible or when no AOI is selected
+  const showMissingDataNotice = !showNationalTreeCover && selectedAoi && !obsLoading && (observations.length === 0 || (!activeObs?.forestOverlayUri && !activeObs?.densityOverlayUri));
 
   return (
     <div className="flex-1 relative flex overflow-hidden h-[calc(100vh-52px)]">
@@ -740,6 +886,10 @@ export const MapWorkspace: React.FC = () => {
         selectedObsT1={selectedObsT1}
         onSelectObsT0={setSelectedObsT0}
         onSelectObsT1={setSelectedObsT1}
+        showNationalTreeCover={showNationalTreeCover}
+        onToggleNationalTreeCover={() => setShowNationalTreeCover(!showNationalTreeCover)}
+        nationalTreeCoverOpacity={nationalTreeCoverOpacity}
+        onChangeNationalTreeCoverOpacity={setNationalTreeCoverOpacity}
         showDensity={showDensity}
         onToggleDensity={() => setShowDensity(!showDensity)}
         densityOpacity={densityOpacity}
@@ -767,19 +917,21 @@ export const MapWorkspace: React.FC = () => {
         <div ref={mapContainerRef} className="w-full h-full" id="maplibre-container" />
 
         {/* Top-center Contextual Sampling Pill */}
-        {showDensity && sampledDensity && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3 py-1.5 bg-surface/95 backdrop-blur-sm border border-forest-900/30 rounded-full shadow-md text-xs font-sans animate-in fade-in slide-in-from-top-2">
-            <Trees className="w-4 h-4 text-forest-700 shrink-0" />
+        {sampledReadout && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-1.5 bg-surface/95 backdrop-blur-sm border border-forest-900/30 rounded-full shadow-md text-xs font-sans animate-in fade-in slide-in-from-top-2">
+            {sampledReadout.isNational ? (
+              <Globe className="w-4 h-4 text-olive-600 shrink-0" />
+            ) : (
+              <Trees className="w-4 h-4 text-forest-700 shrink-0" />
+            )}
             <span className="font-semibold text-ink">
-              {sampledDensity.isCloudOrNodata
-                ? 'Cloud / No-data'
-                : `Tree cover density: ${sampledDensity.density ?? '< 10'}%`}
+              {sampledReadout.label}
             </span>
-            <span className="text-[11px] text-ink-muted border-l border-rule pl-2">
-              {sampledDensity.acquiredAt || activeObs?.acquiredAt || 'Sentinel-2'}
+            <span className="text-[11px] text-ink-muted border-l border-rule pl-2 font-mono">
+              {sampledReadout.date || '2021'}
             </span>
             <button
-              onClick={() => setSampledDensity(null)}
+              onClick={() => setSampledReadout(null)}
               className="text-ink-muted hover:text-ink p-0.5 rounded-full"
               title="Dismiss readout"
             >
@@ -788,17 +940,19 @@ export const MapWorkspace: React.FC = () => {
           </div>
         )}
 
-        {/* Explicit Empty State Banner if no forest data exists for region */}
-        {hasNoForestData && (
+        {/* Notice for regions with ingestion pending (only when national layer is off) */}
+        {showMissingDataNotice && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-amber-50/95 border border-amber-300 rounded shadow-md text-xs text-amber-900 font-medium">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>No forest-cover data for this region yet. Ingestion pending.</span>
+            <span>No Sentinel-2 analysis computed for this region yet. Ingestion pending.</span>
           </div>
         )}
 
         {/* Floating Active Layers Legend */}
         <div className="absolute bottom-6 left-4 z-10">
           <MapLegend
+            showNationalTreeCover={showNationalTreeCover}
+            nationalTreeCoverOpacity={nationalTreeCoverOpacity}
             showDensity={showDensity}
             densityOpacity={densityOpacity}
             showSatellite={showSatellite}

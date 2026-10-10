@@ -1,6 +1,6 @@
-# ForestWatch AI
+# VanDrishti (वन दृष्टि)
 
-> A free, public-interest web platform for exploring forest cover and monitoring *suspected* forest loss using Copernicus Sentinel-2 satellite imagery and machine learning.
+> A free, public-interest web platform for exploring tree cover across India and monitoring *suspected* forest loss in selected regions using Copernicus Sentinel-2 satellite imagery and machine learning.
 
 [![CI](https://github.com/ShreyashSrivastavaa/VanDrishti/actions/workflows/ci.yml/badge.svg)](https://github.com/ShreyashSrivastavaa/VanDrishti/actions)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
@@ -11,15 +11,19 @@
 
 ## 1. Mission & Non-Negotiable Rules
 
-ForestWatch AI is designed to make environmental satellite monitoring transparent, scientifically grounded, and freely accessible to researchers, conservationists, journalists, and the public.
+VanDrishti (वन दृष्टि, "forest vision") is designed to make environmental satellite monitoring transparent, scientifically grounded, and freely accessible to researchers, conservationists, journalists, and the public.
+
+The product operates with two distinct tiers of data:
+1. **National Reference Tree-Cover Layer:** India-wide baseline tree cover pre-built from ESA WorldCover 10 m (classes 10 & 95) aggregated to a ~30 m grid, served as static PMTiles.
+2. **VanDrishti Analysis:** High-resolution Sentinel-2 Level-2A multi-spectral imagery, 11×11 focal density overlays, spectral baseline masks, and bi-temporal hysteresis change detection for curated monitored regions.
 
 1. **Data Integrity Above Everything:** Zero fabricated satellite observations, deforestation statistics, or simulated model metrics. Every number shown in the UI originates from real database rows computed by the geospatial pipeline.
-2. **Honest Model Registry:** Every model in ForestWatch AI operates under an explicit status:
+2. **Honest Model Registry:** Every model in VanDrishti operates under an explicit status:
    - `reference`: Independent external reference product used as-is (e.g., ESA WorldCover 10m).
    - `baseline`: Transparent spectral & rule-based classifier (NDVI, NBR, SWIR thresholds).
    - `prototype`: Trained model without full geographical holdout validation.
    - `validated`: Evaluated on geographically held-out spatial blocks with stored test metrics and Expected Calibration Error (ECE).
-3. **Language Discipline:** ForestWatch AI uses *"suspected forest loss"*, *"possible change"*, or *"detected change"*. Spectral change is **not** definitive proof of legal deforestation; fire scars, rotational timber harvesting, deciduous leaf-off, and agricultural cycles can also cause sudden vegetation loss.
+3. **Language Discipline:** VanDrishti uses *"suspected forest loss"*, *"possible change"*, or *"detected change"*. Spectral change is **not** definitive proof of legal deforestation; fire scars, rotational timber harvesting, deciduous leaf-off, and agricultural cycles can also cause sudden vegetation loss.
 4. **Uncompromising Research Aesthetic:** No neon gradients, no emoji icons, no stock cards, and no glassmorphism. Built with a warm ivory paper background (`#F6F3EA`), near-black charcoal text (`#1B201C`), deep forest green (`#1E3A2A`), and dark-red loss highlights (`#B5402B`). All color pairings exceed WCAG AA contrast (4.5:1), and loss polygons feature diagonal hatch fills with 2px outlines for color-blind safety.
 5. **Completely Free:** No paywalls, user accounts, gated features, or trackers. An optional voluntary support link appears only if configured via `VITE_SUPPORT_URL`.
 
@@ -93,7 +97,7 @@ cp .env.example .env
 ```
 Ensure your `.env` contains valid connection details:
 ```ini
-DATABASE_URL=postgres://postgres:password@localhost:5432/forestwatch
+DATABASE_URL=postgres://postgres:password@localhost:5432/vandrishti
 API_PORT=4000
 PUBLIC_WEB_ORIGIN=http://localhost:5173
 ARTIFACT_STORE=local

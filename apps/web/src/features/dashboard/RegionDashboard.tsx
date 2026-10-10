@@ -228,7 +228,7 @@ export const RegionDashboard: React.FC = () => {
         </div>
 
         <p className="text-xs text-ink-muted pt-2 leading-relaxed border-t border-rule/60">
-          <strong>Caveat:</strong> Hansen Global Forest Change defines "tree cover" regardless of land-use intent (including commercial timber plantations) and aggregates annually at 30-meter resolution. Fine-scale clearings (&lt; 0.5 ha) identified by ForestWatch AI at 10-meter resolution may fall below the Landsat envelope.
+          <strong>Caveat:</strong> Hansen Global Forest Change defines "tree cover" regardless of land-use intent (including commercial timber plantations) and aggregates annually at 30-meter resolution. Fine-scale clearings (&lt; 0.5 ha) identified by VanDrishti at 10-meter resolution may fall below the Landsat envelope.
         </p>
       </div>
 

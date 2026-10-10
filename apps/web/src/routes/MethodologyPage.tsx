@@ -11,7 +11,7 @@ export const MethodologyPage: React.FC = () => {
           Methodology: Multi-Spectral Canopy Change Detection
         </h1>
         <p className="text-base text-ink-muted leading-relaxed font-sans">
-          How ForestWatch AI transforms Copernicus Sentinel-2 Level-2A optical surface reflectance into verifiable, cloud-screened forest loss detections.
+          How VanDrishti transforms Copernicus Sentinel-2 Level-2A optical surface reflectance into verifiable, cloud-screened forest loss detections.
         </p>
       </header>
 
@@ -70,7 +70,7 @@ export const MethodologyPage: React.FC = () => {
           3. Bi-Temporal Hysteresis & MMU Filtering
         </h2>
         <p className="text-sm text-ink-muted">
-          Simple pixel-differencing creates noisy boundary flicker due to slight sub-pixel co-registration offsets and shadow elongation. ForestWatch AI implements a strict hysteresis gap between two observation passes (t0 and t1):
+          Simple pixel-differencing creates noisy boundary flicker due to slight sub-pixel co-registration offsets and shadow elongation. VanDrishti implements a strict hysteresis gap between two observation passes (t0 and t1):
         </p>
         <ul className="list-disc pl-5 text-sm text-ink-muted space-y-2">
           <li>
@@ -108,6 +108,36 @@ export const MethodologyPage: React.FC = () => {
           <div className="p-3 bg-surface border border-rule rounded">
             <span className="font-semibold text-ink">Commercial Tree Plantations:</span>
             <p className="text-ink-muted mt-0.5">Eucalyptus, pine, or oil palm timber cycles undergo scheduled rotational clear-felling and replanting.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Two-Tier Data Architecture */}
+      <section className="space-y-4 pt-4 border-t border-rule">
+        <h2 className="font-serif text-2xl font-semibold text-forest-900">
+          5. Dual-Tier Data Architecture: National Reference vs. VanDrishti Analysis
+        </h2>
+        <p className="text-sm text-ink-muted">
+          The platform operates with two distinct tiers of data, always differentiated in the interface:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="p-4 bg-surface border border-rule rounded space-y-1.5">
+            <div className="flex items-center gap-1.5 font-semibold text-forest-900">
+              <span className="px-1.5 py-0.5 bg-olive-200 text-forest-900 rounded font-mono text-[10px]">Reference</span>
+              <span>National Tree-Cover Layer</span>
+            </div>
+            <p className="text-ink-muted">
+              Pre-built static layer covering all of India, aggregated from ESA WorldCover 10 m (classes 10 & 95) into a ~30 m grid. Serves as an unopinionated reference baseline without claim of VanDrishti model authorship.
+            </p>
+          </div>
+          <div className="p-4 bg-surface border border-rule rounded space-y-1.5">
+            <div className="flex items-center gap-1.5 font-semibold text-forest-900">
+              <span className="px-1.5 py-0.5 bg-forest-900 text-paper rounded font-mono text-[10px]">VanDrishti Analysis</span>
+              <span>Curated Monitored Regions (AOIs)</span>
+            </div>
+            <p className="text-ink-muted">
+              Active Sentinel-2 Level-2A multi-spectral pipeline computing 11×11 valid-pixel-aware focal density, spectral baseline forest masks, and bi-temporal hysteresis change detection for prioritized observation passes.
+            </p>
           </div>
         </div>
       </section>
