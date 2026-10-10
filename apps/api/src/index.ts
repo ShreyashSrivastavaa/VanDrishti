@@ -4,7 +4,11 @@ dotenv.config();
 
 const port = parseInt(process.env.PORT || process.env.API_PORT || '4000', 10);
 
-app.listen(port, () => {
-  console.log(`ForestWatch AI API running at http://localhost:${port}/api/v1`);
-  console.log(`Health check at: http://localhost:${port}/api/v1/health`);
-});
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`ForestWatch AI API running at http://localhost:${port}/api/v1`);
+    console.log(`Health check at: http://localhost:${port}/api/v1/health`);
+  });
+}
+
+export default app;
