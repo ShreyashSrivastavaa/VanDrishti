@@ -8,8 +8,10 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run --workspaces build",
+    "build": "npm run build --workspace=@forestwatch/shared && npm run build --workspace=@forestwatch/api",
+    "build:all": "npm run --workspaces build",
     "build:api": "npm run build --workspace=@forestwatch/shared && npm run build --workspace=@forestwatch/api",
+    "build:web": "npm run build --workspace=@forestwatch/shared && npm run build --workspace=@forestwatch/web",
     "dev": "npm run dev --workspace=@forestwatch/api & npm run dev --workspace=@forestwatch/web",
     "lint": "npm run --workspaces lint",
     "test": "npm run --workspaces test",
